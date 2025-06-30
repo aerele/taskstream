@@ -20,10 +20,16 @@ frappe.ui.form.on('Work Item', {
 				}
 			});
 		}
+		if (frm.is_new() && !frm.doc.planned_start) {
+			frm.set_value('planned_start', frappe.datetime.now_datetime());
+		}
 	},
 	refresh: function (frm) {
 		if (frm.is_new() && !frm.doc.requested_by) {
 			frm.trigger('onload');
+		}
+		if (frm.is_new() && !frm.doc.planned_start) {
+			frm.set_value('planned_start', frappe.datetime.now_datetime());
 		}
 	}
 });
