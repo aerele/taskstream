@@ -6,24 +6,30 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "basic_details_section",
   "requested_by",
   "assignee",
-  "planned_start",
-  "actual_start",
-  "estimated_duration",
-  "actual_duration",
-  "planned_target",
-  "completed_on",
   "summary",
   "description",
-  "revision_count",
-  "recurrence_type",
-  "repeat_until",
+  "column_break_znmq",
   "is_critical",
   "reviewer",
   "status",
   "score",
-  "completion_percent"
+  "completion_percent",
+  "timings_section",
+  "initial_details_column",
+  "planned_start",
+  "estimated_duration",
+  "planned_target",
+  "column_break_xgpa",
+  "actual_start",
+  "actual_duration",
+  "completed_on",
+  "revision_count",
+  "recurrence_details_section",
+  "recurrence_type",
+  "repeat_until"
  ],
  "fields": [
   {
@@ -117,11 +123,12 @@
   {
    "fieldname": "completion_percent",
    "fieldtype": "Percent",
-   "label": "Completion %"
+   "label": "Completion %",
+   "precision": "3"
   },
   {
    "fieldname": "estimated_duration",
-   "fieldtype": "Float",
+   "fieldtype": "Duration",
    "label": "Estimated Duration",
    "non_negative": 1,
    "precision": "2",
@@ -129,16 +136,44 @@
   },
   {
    "fieldname": "actual_duration",
-   "fieldtype": "Float",
+   "fieldtype": "Duration",
    "label": "Actual Duration",
    "non_negative": 1,
    "precision": "2"
+  },
+  {
+   "fieldname": "recurrence_details_section",
+   "fieldtype": "Section Break",
+   "label": "Recurrence Details"
+  },
+  {
+   "fieldname": "basic_details_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Details"
+  },
+  {
+   "fieldname": "column_break_znmq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "timings_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_xgpa",
+   "fieldtype": "Column Break",
+   "label": "Closure Details"
+  },
+  {
+   "fieldname": "initial_details_column",
+   "fieldtype": "Column Break",
+   "label": "Initial Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-02 22:16:04.929167",
+ "modified": "2025-07-02 23:08:58.670673",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
