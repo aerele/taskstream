@@ -10,12 +10,13 @@
   "assignee",
   "planned_start",
   "actual_start",
+  "estimated_duration",
+  "actual_duration",
   "planned_target",
   "completed_on",
   "summary",
   "description",
   "revision_count",
-  "duration",
   "recurrence_type",
   "repeat_until",
   "is_critical",
@@ -29,14 +30,14 @@
    "fieldname": "requested_by",
    "fieldtype": "Link",
    "label": "Requested By",
-   "options": "Employee",
+   "options": "User",
    "read_only": 1
   },
   {
    "fieldname": "assignee",
    "fieldtype": "Link",
    "label": "Assignee",
-   "options": "Employee"
+   "options": "User"
   },
   {
    "fieldname": "planned_start",
@@ -69,16 +70,12 @@
    "label": "Description"
   },
   {
+   "default": "0",
    "fieldname": "revision_count",
    "fieldtype": "Int",
    "label": "Revision Count",
    "non_negative": 1,
    "read_only": 1
-  },
-  {
-   "fieldname": "duration",
-   "fieldtype": "Duration",
-   "label": "Duration"
   },
   {
    "default": "One Time",
@@ -121,12 +118,27 @@
    "fieldname": "completion_percent",
    "fieldtype": "Percent",
    "label": "Completion %"
+  },
+  {
+   "fieldname": "estimated_duration",
+   "fieldtype": "Float",
+   "label": "Estimated Duration",
+   "non_negative": 1,
+   "precision": "2",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "actual_duration",
+   "fieldtype": "Float",
+   "label": "Actual Duration",
+   "non_negative": 1,
+   "precision": "2"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-30 16:50:35.441800",
+ "modified": "2025-07-02 22:16:04.929167",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
