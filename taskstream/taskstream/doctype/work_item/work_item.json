@@ -30,7 +30,7 @@
    "fieldname": "requested_by",
    "fieldtype": "Link",
    "label": "Requested By",
-   "options": "Employee",
+   "options": "User",
    "read_only": 1
   },
   {
