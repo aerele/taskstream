@@ -17,5 +17,10 @@ frappe.ui.form.on('Work Item', {
 		if (frm.is_new() && !frm.doc.planned_start) {
 			frm.set_value('planned_start', frappe.datetime.now_datetime());
 		}
+	},
+	is_critical: function (frm) {
+		if (frm.is_new() && frm.doc.is_critical) {
+			frm.set_value('reviewer', frappe.session.user);
+		}
 	}
 });

@@ -6,24 +6,34 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "basic_details_section",
   "requested_by",
   "assignee",
-  "planned_start",
-  "actual_start",
-  "estimated_duration",
-  "actual_duration",
-  "planned_target",
-  "completed_on",
   "summary",
   "description",
-  "revision_count",
-  "recurrence_type",
-  "repeat_until",
+  "column_break_znmq",
+  "status",
   "is_critical",
   "reviewer",
-  "status",
-  "score",
-  "completion_percent"
+  "timings_section",
+  "initial_details_column",
+  "planned_start",
+  "estimated_duration",
+  "planned_target",
+  "column_break_xgpa",
+  "actual_start",
+  "actual_duration",
+  "completed_on",
+  "recurrence_score_details_section",
+  "recurrence_details_column",
+  "recurrence_type",
+  "repeat_until",
+  "recurrence_day",
+  "repeat_on",
+  "column_break_fyin",
+  "revision_count",
+  "completion_percent",
+  "score"
  ],
  "fields": [
   {
@@ -36,7 +46,7 @@
   {
    "fieldname": "assignee",
    "fieldtype": "Link",
-   "label": "Assignee",
+   "label": "Assigned To",
    "options": "User"
   },
   {
@@ -85,21 +95,17 @@
    "options": "One Time\nDaily\nWeekly\nMonthly\nYearly"
   },
   {
-   "fieldname": "repeat_until",
-   "fieldtype": "Datetime",
-   "label": "Repeat Until"
-  },
-  {
    "default": "0",
    "fieldname": "is_critical",
    "fieldtype": "Check",
    "label": "Is Critical?"
   },
   {
+   "depends_on": "is_critical",
    "fieldname": "reviewer",
    "fieldtype": "Link",
    "label": "Reviewer",
-   "options": "Employee"
+   "options": "User"
   },
   {
    "default": "To Do",
@@ -117,11 +123,12 @@
   {
    "fieldname": "completion_percent",
    "fieldtype": "Percent",
-   "label": "Completion %"
+   "label": "Completion %",
+   "precision": "3"
   },
   {
    "fieldname": "estimated_duration",
-   "fieldtype": "Float",
+   "fieldtype": "Duration",
    "label": "Estimated Duration",
    "non_negative": 1,
    "precision": "2",
@@ -129,16 +136,74 @@
   },
   {
    "fieldname": "actual_duration",
-   "fieldtype": "Float",
+   "fieldtype": "Duration",
    "label": "Actual Duration",
    "non_negative": 1,
    "precision": "2"
+  },
+  {
+   "fieldname": "basic_details_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Details"
+  },
+  {
+   "fieldname": "column_break_znmq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "timings_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_xgpa",
+   "fieldtype": "Column Break",
+   "label": "Closure Details"
+  },
+  {
+   "fieldname": "initial_details_column",
+   "fieldtype": "Column Break",
+   "label": "Initial Details"
+  },
+  {
+   "default": "Monday",
+   "depends_on": "eval: doc.recurrence_type == 'Weekly'",
+   "fieldname": "recurrence_day",
+   "fieldtype": "Select",
+   "label": "Recurrence Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
+   "depends_on": "eval: doc.recurrence_type != 'One Time'",
+   "fieldname": "repeat_until",
+   "fieldtype": "Date",
+   "label": "Repeat Until"
+  },
+  {
+   "depends_on": "eval: doc.recurrence_type == 'Monthly'",
+   "fieldname": "repeat_on",
+   "fieldtype": "Int",
+   "label": "Repeat On (Day of month)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "column_break_fyin",
+   "fieldtype": "Column Break",
+   "label": "Scoring Details"
+  },
+  {
+   "fieldname": "recurrence_score_details_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "recurrence_details_column",
+   "fieldtype": "Column Break",
+   "label": "Recurrence Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-02 22:16:04.929167",
+ "modified": "2025-07-03 11:36:04.223313",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
@@ -161,5 +226,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
