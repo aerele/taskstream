@@ -33,7 +33,8 @@
   "column_break_fyin",
   "revision_count",
   "completion_percent",
-  "score"
+  "score",
+  "amended_from"
  ],
  "fields": [
   {
@@ -47,12 +48,14 @@
    "fieldname": "assignee",
    "fieldtype": "Link",
    "label": "Assigned To",
-   "options": "User"
+   "options": "User",
+   "reqd": 1
   },
   {
    "fieldname": "planned_start",
    "fieldtype": "Datetime",
-   "label": "Planned Start"
+   "label": "Planned Start",
+   "reqd": 1
   },
   {
    "fieldname": "actual_start",
@@ -199,12 +202,22 @@
    "fieldname": "recurrence_details_column",
    "fieldtype": "Column Break",
    "label": "Recurrence Details"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Work Item",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-03 12:33:41.942105",
+ "modified": "2025-07-03 17:30:30.621621",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
