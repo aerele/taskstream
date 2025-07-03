@@ -129,10 +129,11 @@
   {
    "fieldname": "estimated_duration",
    "fieldtype": "Duration",
+   "in_list_view": 1,
    "label": "Estimated Duration",
    "non_negative": 1,
    "precision": "2",
-   "set_only_once": 1
+   "reqd": 1
   },
   {
    "fieldname": "actual_duration",
@@ -203,7 +204,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-03 11:36:04.223313",
+ "modified": "2025-07-03 12:33:41.942105",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
