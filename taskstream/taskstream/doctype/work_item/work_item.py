@@ -7,12 +7,17 @@ from frappe.model.document import Document
 class WorkItem(Document):
 	def validate(self):
 		self.update_revision_count()
+		self.validate_reviewer()
 
 	def update_revision_count(self):
 		if self.name and not self.is_new():
 			old_duration = frappe.db.get_value("Work Item", self.name, "estimated_duration")
 			if old_duration != self.estimated_duration:
 				self.revision_count = self.revision_count + 1
+	
+	def validate_reviewer(self):
+		if self.reviewer == self.assignee:
+			frappe.throw("Assignee and Reviewer cannot be same")
 
 @frappe.whitelist()
 def send_for_review(docname):

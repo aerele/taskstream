@@ -80,8 +80,21 @@ frappe.ui.form.on('Work Item', {
 	},
 
 	is_critical: function (frm) {
-		if (frm.is_new() && frm.doc.is_critical) {
+		if (frm.doc.is_critical && !frm.doc.reviewer) {
 			frm.set_value('reviewer', frappe.session.user);
+		}
+		frm.set_df_property('reviewer', 'reqd', frm.doc.is_critical);
+	},
+
+	reviewer: function (frm) {
+		if (frm.doc.reviewer == frm.doc.assignee) {
+			frappe.throw("Reviwer cannot be same as the Assignee")
+		}
+	},
+
+	assignee: function (frm) {
+		if (frm.doc.reviewer == frm.doc.assignee) {
+			frappe.throw("Assignee cannot be same as the Reviewer")
 		}
 	}
 });
