@@ -46,7 +46,7 @@
   {
    "fieldname": "assignee",
    "fieldtype": "Link",
-   "label": "Assignee",
+   "label": "Assigned To",
    "options": "User"
   },
   {
@@ -101,10 +101,11 @@
    "label": "Is Critical?"
   },
   {
+   "depends_on": "is_critical",
    "fieldname": "reviewer",
    "fieldtype": "Link",
    "label": "Reviewer",
-   "options": "Employee"
+   "options": "User"
   },
   {
    "default": "To Do",
@@ -202,7 +203,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-03 11:18:03.773904",
+ "modified": "2025-07-03 11:36:04.223313",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
