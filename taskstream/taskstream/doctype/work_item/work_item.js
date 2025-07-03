@@ -84,5 +84,17 @@ frappe.ui.form.on('Work Item', {
 			frm.set_value('reviewer', frappe.session.user);
 		}
 		frm.set_df_property('reviewer', 'reqd', frm.doc.is_critical);
+	},
+
+	reviewer: function (frm) {
+		if (frm.doc.reviewer == frm.doc.assignee) {
+			frappe.throw("Reviwer cannot be same as the Assignee")
+		}
+	},
+
+	assignee: function (frm) {
+		if (frm.doc.reviewer == frm.doc.assignee) {
+			frappe.throw("Assignee cannot be same as the Reviewer")
+		}
 	}
 });
