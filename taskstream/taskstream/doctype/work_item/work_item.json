@@ -12,11 +12,9 @@
   "summary",
   "description",
   "column_break_znmq",
+  "status",
   "is_critical",
   "reviewer",
-  "status",
-  "score",
-  "completion_percent",
   "timings_section",
   "initial_details_column",
   "planned_start",
@@ -26,12 +24,16 @@
   "actual_start",
   "actual_duration",
   "completed_on",
-  "revision_count",
-  "recurrence_details_section",
+  "recurrence_score_details_section",
+  "recurrence_details_column",
   "recurrence_type",
   "repeat_until",
   "recurrence_day",
-  "repeat_on"
+  "repeat_on",
+  "column_break_fyin",
+  "revision_count",
+  "completion_percent",
+  "score"
  ],
  "fields": [
   {
@@ -139,11 +141,6 @@
    "precision": "2"
   },
   {
-   "fieldname": "recurrence_details_section",
-   "fieldtype": "Section Break",
-   "label": "Recurrence Details"
-  },
-  {
    "fieldname": "basic_details_section",
    "fieldtype": "Section Break",
    "label": "Basic Details"
@@ -186,12 +183,26 @@
    "fieldtype": "Int",
    "label": "Repeat On (Day of month)",
    "non_negative": 1
+  },
+  {
+   "fieldname": "column_break_fyin",
+   "fieldtype": "Column Break",
+   "label": "Scoring Details"
+  },
+  {
+   "fieldname": "recurrence_score_details_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "recurrence_details_column",
+   "fieldtype": "Column Break",
+   "label": "Recurrence Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-03 11:12:03.834113",
+ "modified": "2025-07-03 11:18:03.773904",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
