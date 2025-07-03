@@ -29,7 +29,9 @@
   "revision_count",
   "recurrence_details_section",
   "recurrence_type",
-  "repeat_until"
+  "repeat_until",
+  "recurrence_day",
+  "repeat_on"
  ],
  "fields": [
   {
@@ -89,11 +91,6 @@
    "fieldtype": "Select",
    "label": "Recurrence Type",
    "options": "One Time\nDaily\nWeekly\nMonthly\nYearly"
-  },
-  {
-   "fieldname": "repeat_until",
-   "fieldtype": "Datetime",
-   "label": "Repeat Until"
   },
   {
    "default": "0",
@@ -168,12 +165,33 @@
    "fieldname": "initial_details_column",
    "fieldtype": "Column Break",
    "label": "Initial Details"
+  },
+  {
+   "default": "Monday",
+   "depends_on": "eval: doc.recurrence_type == 'Weekly'",
+   "fieldname": "recurrence_day",
+   "fieldtype": "Select",
+   "label": "Recurrence Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
+   "depends_on": "eval: doc.recurrence_type != 'One Time'",
+   "fieldname": "repeat_until",
+   "fieldtype": "Date",
+   "label": "Repeat Until"
+  },
+  {
+   "depends_on": "eval: doc.recurrence_type == 'Monthly'",
+   "fieldname": "repeat_on",
+   "fieldtype": "Int",
+   "label": "Repeat On (Day of month)",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-02 23:08:58.670673",
+ "modified": "2025-07-03 11:12:03.834113",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
@@ -196,5 +214,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
