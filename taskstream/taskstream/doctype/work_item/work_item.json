@@ -47,7 +47,7 @@
   {
    "fieldname": "assignee",
    "fieldtype": "Link",
-   "label": "Assigned To",
+   "label": "Assign To",
    "options": "User",
    "reqd": 1
   },
@@ -217,7 +217,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-03 17:30:30.621621",
+ "modified": "2025-07-03 17:48:49.887718",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
