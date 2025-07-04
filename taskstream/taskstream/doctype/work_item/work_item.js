@@ -21,7 +21,7 @@ frappe.ui.form.on('Work Item', {
 
 		frm.clear_custom_buttons();
 
-		if (!frm.is_new() && frm.doc.status !== 'Done') {
+		if (!frm.is_new() && !['To Do', 'Done'].includes(frm.doc.status)) {
 			const user = frappe.session.user;
 			const isCritical = frm.doc.is_critical;
 
