@@ -35,7 +35,7 @@ frappe.ui.form.on('Work Item', {
 						}
 					}
 				});
-			}, __('Actions'));
+			});
 		}
 		if (!frm.is_new() && !['To Do', 'Done'].includes(frm.doc.status)) {
 			const isCritical = frm.doc.is_critical;
@@ -53,7 +53,7 @@ frappe.ui.form.on('Work Item', {
 								}
 							}
 						});
-					}, __('Actions'));
+					});
 				}
 
 				if (user === frm.doc.reviewer) {
@@ -68,7 +68,7 @@ frappe.ui.form.on('Work Item', {
 								}
 							}
 						});
-					}, __('Actions'));
+					});
 				}
 
 			} else {
