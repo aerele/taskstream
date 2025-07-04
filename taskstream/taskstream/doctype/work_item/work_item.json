@@ -60,7 +60,8 @@
   {
    "fieldname": "actual_start",
    "fieldtype": "Datetime",
-   "label": "Actual Start"
+   "label": "Actual Start",
+   "read_only": 1
   },
   {
    "fieldname": "planned_target",
@@ -115,7 +116,8 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "To Do\nIn Progress\nUnder Review\nDone"
+   "options": "To Do\nIn Progress\nUnder Review\nDone",
+   "read_only": 1
   },
   {
    "fieldname": "score",
@@ -217,7 +219,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-03 17:48:49.887718",
+ "modified": "2025-07-04 12:17:57.717149",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
