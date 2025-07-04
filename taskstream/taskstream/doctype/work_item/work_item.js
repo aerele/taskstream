@@ -26,7 +26,7 @@ frappe.ui.form.on('Work Item', {
 			const isCritical = frm.doc.is_critical;
 
 			if (isCritical) {
-				if (user === frm.doc.assignee) {
+				if (user === frm.doc.assignee && frm.doc.status !== 'Under Review') {
 					frm.add_custom_button(__('Send for Review'), function () {
 						frappe.call({
 							method: 'taskstream.taskstream.doctype.work_item.work_item.send_for_review',
