@@ -141,6 +141,7 @@
    "in_list_view": 1,
    "label": "Estimated Duration (in hours)",
    "non_negative": 1,
+   "placeholder": "0.00",
    "precision": "2",
    "reqd": 1
   },
@@ -150,6 +151,7 @@
    "fieldtype": "Float",
    "label": "Actual Duration (in hours)",
    "non_negative": 1,
+   "placeholder": "0.00",
    "precision": "2"
   },
   {
@@ -232,7 +234,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-04 17:12:17.200881",
+ "modified": "2025-07-04 17:24:50.025614",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
