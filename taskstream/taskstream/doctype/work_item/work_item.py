@@ -42,3 +42,11 @@ def mark_complete(docname):
 
 	doc.status = "Done"
 	doc.save(ignore_permissions=True)
+
+@frappe.whitelist()
+def start_now(docname):
+	doc = frappe.get_doc("Work Item", docname)
+
+	doc.status = "In Progress"
+	doc.actual_start = frappe.utils.now_datetime()
+	doc.save(ignore_permissions=True)
