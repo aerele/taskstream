@@ -21,12 +21,27 @@ frappe.ui.form.on('Work Item', {
 
 		frm.clear_custom_buttons();
 
-		if (!frm.is_new() && frm.doc.status !== 'Done') {
-			const user = frappe.session.user;
+		const user = frappe.session.user;
+
+		if (!frm.is_new() && frm.doc.status === 'To Do' && frm.doc.assignee === user) {
+			frm.add_custom_button(__('Start Now'), function () {
+				frappe.call({
+					method: 'taskstream.taskstream.doctype.work_item.work_item.start_now',
+					args: { docname: frm.doc.name },
+					callback: function (r) {
+						if (!r.exc) {
+							frappe.msgprint(__('Work Item started!'));
+							frm.reload_doc();
+						}
+					}
+				});
+			});
+		}
+		if (!frm.is_new() && !['To Do', 'Done'].includes(frm.doc.status)) {
 			const isCritical = frm.doc.is_critical;
 
 			if (isCritical) {
-				if (user === frm.doc.assignee) {
+				if (user === frm.doc.assignee && frm.doc.status !== 'Under Review') {
 					frm.add_custom_button(__('Send for Review'), function () {
 						frappe.call({
 							method: 'taskstream.taskstream.doctype.work_item.work_item.send_for_review',
@@ -38,7 +53,7 @@ frappe.ui.form.on('Work Item', {
 								}
 							}
 						});
-					}, __('Actions'));
+					});
 				}
 
 				if (user === frm.doc.reviewer) {
@@ -53,7 +68,7 @@ frappe.ui.form.on('Work Item', {
 								}
 							}
 						});
-					}, __('Actions'));
+					});
 				}
 
 			} else {
