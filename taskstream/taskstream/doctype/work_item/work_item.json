@@ -50,7 +50,8 @@
   {
    "fieldname": "summary",
    "fieldtype": "Small Text",
-   "label": "Summary"
+   "label": "Summary",
+   "max_height": "80px"
   },
   {
    "fieldname": "description",
@@ -196,7 +197,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-07 18:52:30.727960",
+ "modified": "2025-07-07 18:56:51.613370",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
