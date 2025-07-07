@@ -17,14 +17,9 @@
   "reviewer",
   "timings_section",
   "initial_details_column",
-  "planned_start",
   "estimated_duration",
-  "planned_target",
   "column_break_xgpa",
-  "dummy_start",
-  "actual_start",
   "actual_duration",
-  "completed_on",
   "recurrence_score_details_section",
   "recurrence_details_column",
   "recurrence_type",
@@ -51,31 +46,6 @@
    "label": "Assign To",
    "options": "User",
    "reqd": 1
-  },
-  {
-   "fieldname": "planned_start",
-   "fieldtype": "Datetime",
-   "label": "Planned Start",
-   "reqd": 1
-  },
-  {
-   "depends_on": "eval: doc.status != 'To Do'",
-   "fieldname": "actual_start",
-   "fieldtype": "Datetime",
-   "label": "Actual Start",
-   "read_only": 1
-  },
-  {
-   "fieldname": "planned_target",
-   "fieldtype": "Datetime",
-   "label": "Planned Target",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval: doc.status != 'To Do'",
-   "fieldname": "completed_on",
-   "fieldtype": "Datetime",
-   "label": "Completed On"
   },
   {
    "fieldname": "summary",
@@ -221,20 +191,12 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "default": "Not started yet",
-   "depends_on": "eval: doc.status == 'To Do'",
-   "fieldname": "dummy_start",
-   "fieldtype": "Data",
-   "label": "Actual Start",
-   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-04 17:24:50.025614",
+ "modified": "2025-07-07 18:52:30.727960",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
