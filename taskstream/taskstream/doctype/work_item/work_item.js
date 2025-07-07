@@ -6,17 +6,11 @@ frappe.ui.form.on('Work Item', {
 		if (frm.is_new() && !frm.doc.requested_by) {
 			frm.set_value('requested_by', frappe.session.user);
 		}
-		if (frm.is_new() && !frm.doc.planned_start) {
-			frm.set_value('planned_start', frappe.datetime.now_datetime());
-		}
 	},
 
 	refresh: function (frm) {
 		if (frm.is_new() && !frm.doc.requested_by) {
 			frm.set_value('requested_by', frappe.session.user);
-		}
-		if (frm.is_new() && !frm.doc.planned_start) {
-			frm.set_value('planned_start', frappe.datetime.now_datetime());
 		}
 
 		frm.clear_custom_buttons();
@@ -91,7 +85,6 @@ frappe.ui.form.on('Work Item', {
 
 		const isDone = frm.doc.status === 'Done';
 		frm.set_df_property('actual_duration', 'read_only', isDone);
-		frm.set_df_property('completed_on', 'read_only', isDone);
 	},
 
 	is_critical: function (frm) {
