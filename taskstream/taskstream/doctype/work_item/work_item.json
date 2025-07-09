@@ -149,12 +149,11 @@
    "label": "Initial Details"
   },
   {
-   "default": "Monday",
    "depends_on": "eval: doc.recurrence_type == 'Weekly'",
    "fieldname": "recurrence_day",
-   "fieldtype": "Select",
+   "fieldtype": "Table MultiSelect",
    "label": "Recurrence Day",
-   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+   "options": "Weekday Option"
   },
   {
    "depends_on": "eval: doc.recurrence_type != 'One Time'",
@@ -197,7 +196,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-07 18:56:51.613370",
+ "modified": "2025-07-09 18:20:23.711368",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
