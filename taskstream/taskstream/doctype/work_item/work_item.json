@@ -25,8 +25,8 @@
   "recurrence_type",
   "repeat_until",
   "recurrence_day",
-  "repeat_on",
   "recurrence_month",
+  "repeat_on",
   "column_break_fyin",
   "revision_count",
   "completion_percent",
@@ -163,7 +163,7 @@
    "label": "Repeat Until"
   },
   {
-   "depends_on": "eval: doc.recurrence_type == 'Monthly'",
+   "depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type)",
    "fieldname": "repeat_on",
    "fieldtype": "Int",
    "label": "Repeat On (Day of month)",
@@ -194,6 +194,7 @@
    "search_index": 1
   },
   {
+   "depends_on": "eval: doc.recurrence_type == 'Yearly'",
    "fieldname": "recurrence_month",
    "fieldtype": "Table MultiSelect",
    "label": "Recurrence Month",
@@ -203,7 +204,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-09 19:11:15.279386",
+ "modified": "2025-07-09 19:18:56.288653",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
