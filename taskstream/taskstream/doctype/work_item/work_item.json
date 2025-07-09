@@ -26,6 +26,7 @@
   "repeat_until",
   "recurrence_day",
   "repeat_on",
+  "recurrence_month",
   "column_break_fyin",
   "revision_count",
   "completion_percent",
@@ -191,12 +192,18 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "recurrence_month",
+   "fieldtype": "Table MultiSelect",
+   "label": "Recurrence Month",
+   "options": "Month Option"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-09 18:20:23.711368",
+ "modified": "2025-07-09 19:11:15.279386",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
