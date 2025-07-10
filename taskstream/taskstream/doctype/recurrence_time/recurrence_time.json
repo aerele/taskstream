@@ -1,0 +1,36 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-07-10 11:12:13.014644",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "recurrence_time"
+ ],
+ "fields": [
+  {
+   "fieldname": "recurrence_time",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Recurrence Time",
+   "non_negative": 1,
+   "placeholder": "Hour of the day (in IST)",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-07-10 11:17:05.092553",
+ "modified_by": "Administrator",
+ "module": "Taskstream",
+ "name": "Recurrence Time",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
