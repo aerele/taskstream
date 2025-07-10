@@ -100,12 +100,12 @@ frappe.ui.form.on('Work Item', {
 							args: { docname: frm.doc.name },
 							callback: function (r) {
 								if (!r.exc) {
-									frappe.msgprint(__('Marked as Done.'));
+									frappe.msgprint(__('Marked as Done!'));
 									frm.reload_doc();
 								}
 							}
 						});
-					}, __('Actions'));
+					});
 				}
 			}
 		}
