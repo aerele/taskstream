@@ -8,6 +8,7 @@ class WorkItem(Document):
 	def validate(self):
 		self.update_revision_count()
 		self.validate_reviewer()
+		self.validate_recurrence_date()
 
 	def update_revision_count(self):
 		if self.name and not self.is_new():
@@ -18,6 +19,16 @@ class WorkItem(Document):
 	def validate_reviewer(self):
 		if self.reviewer == self.assignee:
 			frappe.throw("Assignee and Reviewer cannot be same")
+	
+	def validate_recurrence_date(self):
+		for row in self.recurrence_date:
+			val = row.recurrence_date
+			if val is None:
+				continue
+			if val != -1 and not (1 <= val <= 31):
+				frappe.throw(
+					f"<b>Invalid recurrence date: '{val}'</b><br> Date must be -1 (for last day) or between 1 and 31."
+				)
 
 @frappe.whitelist()
 def send_for_review(docname):
