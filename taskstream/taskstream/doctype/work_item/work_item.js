@@ -106,3 +106,17 @@ frappe.ui.form.on('Work Item', {
 		}
 	}
 });
+
+frappe.ui.form.on('Recurrence Date', {
+	recurrence_date: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+		let val = row.recurrence_date;
+
+		if (val) {
+			if (!(val === -1 || (val >= 1 && val <= 31))) {
+				frappe.msgprint(__('Recurrence Date must be -1 (for last day) or between 1 and 31.'));
+				frappe.model.set_value(cdt, cdn, 'recurrence_date', '');
+			}
+		}
+	}
+});
