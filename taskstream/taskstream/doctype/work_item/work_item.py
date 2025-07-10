@@ -3,8 +3,6 @@
 
 import frappe
 from frappe.model.document import Document
-from datetime import datetime, timedelta, time
-from frappe.utils import get_datetime
 
 class WorkItem(Document):
 	def validate(self):
