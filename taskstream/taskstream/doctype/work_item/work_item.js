@@ -31,11 +31,11 @@ frappe.ui.form.on('Work Item', {
 				});
 			});
 		}
-		if (!frm.is_new() && !['To Do', 'Done'].includes(frm.doc.status)) {
+		if (!frm.is_new() && ['In Progress', 'Under Review'].includes(frm.doc.status)) {
 			const isCritical = frm.doc.is_critical;
 
 			if (isCritical) {
-				if (user === frm.doc.assignee && frm.doc.status !== 'Under Review') {
+				if (user === frm.doc.assignee && frm.doc.status == 'In Progress') {
 					frm.add_custom_button(__('Send for Review'), function () {
 						frappe.call({
 							method: 'taskstream.taskstream.doctype.work_item.work_item.send_for_review',
@@ -50,7 +50,20 @@ frappe.ui.form.on('Work Item', {
 					});
 				}
 
-				if (user === frm.doc.reviewer) {
+				if (user === frm.doc.reviewer && frm.doc.status == 'Under Review') {
+					frm.add_custom_button(__('Resend for rework'), function () {
+						frappe.call({
+							method: 'taskstream.taskstream.doctype.work_item.work_item.resend_for_rework',
+							args: { docname: frm.doc.name },
+							callback: function (r) {
+								if (!r.exc) {
+									frappe.msgprint(__('Work Item has been sent for rework!'));
+									frm.reload_doc();
+								}
+							}
+						});
+					});
+
 					frm.add_custom_button(__('Mark Complete'), function () {
 						frappe.call({
 							method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',

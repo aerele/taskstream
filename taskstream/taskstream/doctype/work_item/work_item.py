@@ -60,3 +60,10 @@ def start_now(docname):
 
 	doc.status = "In Progress"
 	doc.save(ignore_permissions=True)
+
+@frappe.whitelist()
+def resend_for_rework(docname):
+	doc = frappe.get_doc("Work Item", docname)
+
+	doc.status = "Rework Needed"
+	doc.save(ignore_permissions=True)
