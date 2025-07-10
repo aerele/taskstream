@@ -199,22 +199,22 @@
    "fieldname": "recurrence_time",
    "fieldtype": "Table",
    "label": "Recurrence Time",
-   "options": "Recurrence Time",
-   "reqd": 1
+   "mandatory_depends_on": "eval: doc.recurrence_type != 'One Time'",
+   "options": "Recurrence Time"
   },
   {
    "depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type)",
    "fieldname": "recurrence_date",
    "fieldtype": "Table",
    "label": "Recurrence Date",
-   "options": "Recurrence Date",
-   "reqd": 1
+   "mandatory_depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type)",
+   "options": "Recurrence Date"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-10 11:42:14.167766",
+ "modified": "2025-07-10 11:50:19.137354",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
