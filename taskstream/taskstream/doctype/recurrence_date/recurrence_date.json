@@ -15,15 +15,14 @@
    "in_list_view": 1,
    "label": "Recurrence Date",
    "placeholder": "Date of the month",
-   "reqd": 1,
-   "unique": 1
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-07-10 12:06:17.600322",
+ "modified": "2025-07-10 18:32:51.541037",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Recurrence Date",
