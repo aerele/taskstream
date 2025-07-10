@@ -23,10 +23,11 @@
   "recurrence_score_details_section",
   "recurrence_details_column",
   "recurrence_type",
-  "repeat_until",
   "recurrence_day",
   "recurrence_month",
-  "repeat_on",
+  "recurrence_date",
+  "recurrence_time",
+  "repeat_until",
   "column_break_fyin",
   "revision_count",
   "completion_percent",
@@ -163,13 +164,6 @@
    "label": "Repeat Until"
   },
   {
-   "depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type)",
-   "fieldname": "repeat_on",
-   "fieldtype": "Int",
-   "label": "Repeat On (Day of month)",
-   "non_negative": 1
-  },
-  {
    "fieldname": "column_break_fyin",
    "fieldtype": "Column Break",
    "label": "Scoring Details"
@@ -199,12 +193,28 @@
    "fieldtype": "Table MultiSelect",
    "label": "Recurrence Month",
    "options": "Month Option"
+  },
+  {
+   "depends_on": "eval: doc.recurrence_type != 'One Time'",
+   "fieldname": "recurrence_time",
+   "fieldtype": "Table",
+   "label": "Recurrence Time",
+   "options": "Recurrence Time",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type)",
+   "fieldname": "recurrence_date",
+   "fieldtype": "Table",
+   "label": "Recurrence Date",
+   "options": "Recurrence Date",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-09 19:18:56.288653",
+ "modified": "2025-07-10 11:42:14.167766",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
