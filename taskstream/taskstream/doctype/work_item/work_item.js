@@ -31,6 +31,20 @@ frappe.ui.form.on('Work Item', {
 				});
 			});
 		}
+		if (!frm.is_new() && frm.doc.status === 'Rework Needed' && frm.doc.assignee === user) {
+			frm.add_custom_button(__('Start Rework'), function () {
+				frappe.call({
+					method: 'taskstream.taskstream.doctype.work_item.work_item.start_now',
+					args: { docname: frm.doc.name },
+					callback: function (r) {
+						if (!r.exc) {
+							frappe.msgprint(__('Work Item re-started!'));
+							frm.reload_doc();
+						}
+					}
+				});
+			});
+		}
 		if (!frm.is_new() && ['In Progress', 'Under Review'].includes(frm.doc.status)) {
 			const isCritical = frm.doc.is_critical;
 
