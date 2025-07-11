@@ -160,3 +160,25 @@ frappe.ui.form.on('Recurrence Date', {
 		}
 	}
 });
+
+frappe.ui.form.on('Recurrence Time', {
+	recurrence_time: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+		let val = row.recurrence_time;
+
+		if (val) {
+			let is_duplicate = false;
+
+			frm.doc.recurrence_time.forEach(d => {
+				if (d.name !== row.name && d.recurrence_time === val) {
+					is_duplicate = true;
+				}
+			});
+
+			if (is_duplicate) {
+				frappe.msgprint(__('Recurrence time cannot be repeated!'));
+				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+			}
+		}
+	}
+});
