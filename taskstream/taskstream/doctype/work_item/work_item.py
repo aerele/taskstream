@@ -74,6 +74,7 @@ def start_now(docname):
 	doc = frappe.get_doc("Work Item", docname)
 
 	doc.status = "In Progress"
+	doc.start_time = frappe.utils.now_datetime()
 	doc.save(ignore_permissions=True)
 
 @frappe.whitelist()
