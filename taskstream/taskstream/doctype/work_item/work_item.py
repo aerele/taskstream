@@ -148,7 +148,7 @@ def calculate_planned_target(doc):
 
 		current_dt = datetime.combine(current_day + timedelta(days=1), shift_start)
 
-	doc.planned_end = current_dt
+	doc.planned_end = current_dt.replace(second=0, microsecond=0)
 
 	reminder_delta = timedelta(seconds=duration_hours * 3600 * 0.20)
 	doc.twenty_percent_reminder_time = current_dt - reminder_delta
@@ -166,6 +166,7 @@ def ensure_time(value):
 
 def send_twenty_percent_reminders():
 	now = now_datetime()
+	frappe.log_error(now)
 	items = frappe.get_all("Work Item", filters={
 		"status": "In Progress",
 		"twenty_percent_reminder_sent": 0,
@@ -184,3 +185,24 @@ def send_twenty_percent_reminders():
 			frappe.db.set_value("Work Item", item.name, "twenty_percent_reminder_sent", 1)
 		else:
 			frappe.log_error("Work Item Reminder Error", f"User {item.assignee} does not have a valid email.")
+
+def send_deadline_reminders():
+	now = now_datetime()
+	items = frappe.get_all("Work Item", filters={
+		"status": "In Progress",
+		"deadline_reminder_sent": 0,
+		"planned_end": ("=", now)
+	}, fields=["name", "assignee"])
+
+	for item in items:
+		user_email = frappe.db.get_value("User", item.assignee, "email")
+		if user_email:
+			frappe.sendmail(
+				recipients=[user_email],
+				subject=f"Work Item {item.name} Deadline Reached",
+				message=f"The deadline is met for the Work Item <b>{item.name}</b>, but it's still marked as <i>In Progress</i>. Please review it.<br><a href='{frappe.utils.get_url()}/app/work-item/{item.name}'>View Work Item</a>",
+				now=True
+			)
+			frappe.db.set_value("Work Item", item.name, "deadline_reminder_sent", 1)
+		else:
+			frappe.log_error("Deadline Reminder Error", f"User {item.assignee} has no valid email.")

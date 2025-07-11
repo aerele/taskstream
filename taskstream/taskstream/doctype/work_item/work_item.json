@@ -37,7 +37,8 @@
   "internal_section_section",
   "planned_end",
   "twenty_percent_reminder_time",
-  "twenty_percent_reminder_sent"
+  "twenty_percent_reminder_sent",
+  "deadline_reminder_sent"
  ],
  "fields": [
   {
@@ -242,12 +243,18 @@
    "fieldname": "twenty_percent_reminder_sent",
    "fieldtype": "Check",
    "label": "Twenty Percent Reminder Sent"
+  },
+  {
+   "default": "0",
+   "fieldname": "deadline_reminder_sent",
+   "fieldtype": "Check",
+   "label": "Deadline Reminder Sent"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-11 16:53:44.953395",
+ "modified": "2025-07-11 17:56:21.661219",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
