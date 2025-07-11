@@ -18,6 +18,7 @@
   "timings_section",
   "initial_details_column",
   "estimated_duration",
+  "start_time",
   "column_break_xgpa",
   "actual_duration",
   "recurrence_score_details_section",
@@ -209,12 +210,18 @@
    "label": "Recurrence Date",
    "mandatory_depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type)",
    "options": "Recurrence Date"
+  },
+  {
+   "fieldname": "start_time",
+   "fieldtype": "Datetime",
+   "label": "Start Time",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-10 17:42:05.439337",
+ "modified": "2025-07-11 11:33:44.972021",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
