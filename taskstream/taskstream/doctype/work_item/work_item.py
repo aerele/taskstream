@@ -9,6 +9,7 @@ class WorkItem(Document):
 		self.update_revision_count()
 		self.validate_reviewer()
 		self.validate_recurrence_date()
+		self.validate_recurrence_time()
 
 	def update_revision_count(self):
 		if self.name and not self.is_new():
@@ -32,6 +33,16 @@ class WorkItem(Document):
 				)
 			if val in seen:
 				frappe.throw("Each recurrence date must be unique!")
+			seen.add(val)
+	
+	def validate_recurrence_time(self):
+		seen = set()
+		for row in self.recurrence_time:
+			val = row.recurrence_time
+			if val is None:
+				continue
+			if val in seen:
+				frappe.throw("Each recurrence time must be unique!")
 			seen.add(val)
 
 @frappe.whitelist()
