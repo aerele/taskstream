@@ -79,7 +79,7 @@ def start_now(docname):
 	doc = frappe.get_doc("Work Item", docname)
 
 	doc.status = "In Progress"
-	doc.start_time = frappe.utils.now_datetime()
+	doc.start_time = now_datetime()
 	doc.save(ignore_permissions=True)
 
 @frappe.whitelist()
@@ -165,8 +165,7 @@ def ensure_time(value):
 	return value
 
 def send_twenty_percent_reminders():
-	now = now_datetime()
-	frappe.log_error(now)
+	now = now_datetime().replace(second=0, microsecond=0)
 	items = frappe.get_all("Work Item", filters={
 		"status": "In Progress",
 		"twenty_percent_reminder_sent": 0,
@@ -187,7 +186,7 @@ def send_twenty_percent_reminders():
 			frappe.log_error("Work Item Reminder Error", f"User {item.assignee} does not have a valid email.")
 
 def send_deadline_reminders():
-	now = now_datetime()
+	now = now_datetime().replace(second=0, microsecond=0)
 	items = frappe.get_all("Work Item", filters={
 		"status": "In Progress",
 		"deadline_reminder_sent": 0,
