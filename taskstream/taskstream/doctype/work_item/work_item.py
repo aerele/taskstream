@@ -152,6 +152,7 @@ def calculate_planned_target(doc):
 
 	reminder_delta = timedelta(seconds=duration_hours * 3600 * 0.20)
 	doc.twenty_percent_reminder_time = current_dt - reminder_delta
+	doc.twenty_percent_reminder_time = doc.twenty_percent_reminder_time.replace(second=0, microsecond=0)
 	doc.twenty_percent_reminder_sent = 0
 
 def ensure_time(value):
@@ -168,7 +169,7 @@ def send_twenty_percent_reminders():
 	items = frappe.get_all("Work Item", filters={
 		"status": "In Progress",
 		"twenty_percent_reminder_sent": 0,
-		"twenty_percent_reminder_time": ("<=", now)
+		"twenty_percent_reminder_time": ("=", now)
 	}, fields=["name", "assignee"])
 
 	for item in items:
