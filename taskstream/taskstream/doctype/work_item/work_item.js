@@ -144,6 +144,19 @@ frappe.ui.form.on('Recurrence Date', {
 				frappe.msgprint(__('Recurrence Date must be -1 (for last day) or between 1 and 31.'));
 				frappe.model.set_value(cdt, cdn, 'recurrence_date', '');
 			}
+
+			let is_duplicate = false;
+
+			frm.doc.recurrence_date.forEach(d => {
+				if (d.name !== row.name && d.recurrence_date === val) {
+					is_duplicate = true;
+				}
+			});
+
+			if (is_duplicate) {
+				frappe.msgprint(__('Recurrence date cannot be repeated!'));
+				frappe.model.set_value(cdt, cdn, 'recurrence_date', '');
+			}
 		}
 	}
 });

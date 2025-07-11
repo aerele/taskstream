@@ -21,6 +21,7 @@ class WorkItem(Document):
 			frappe.throw("Assignee and Reviewer cannot be same")
 	
 	def validate_recurrence_date(self):
+		seen = set()
 		for row in self.recurrence_date:
 			val = row.recurrence_date
 			if val is None:
@@ -29,6 +30,9 @@ class WorkItem(Document):
 				frappe.throw(
 					f"<b>Invalid recurrence date: '{val}'</b><br> Date must be -1 (for last day) or between 1 and 31."
 				)
+			if val in seen:
+				frappe.throw("Each recurrence date must be unique!")
+			seen.add(val)
 
 @frappe.whitelist()
 def send_for_review(docname):
