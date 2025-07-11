@@ -162,3 +162,24 @@ def ensure_time(value):
 		seconds = total_seconds % 60
 		return time(hour=hours, minute=minutes, second=seconds)
 	return value
+
+def send_twenty_percent_reminders():
+	now = now_datetime()
+	items = frappe.get_all("Work Item", filters={
+		"status": "In Progress",
+		"twenty_percent_reminder_sent": 0,
+		"twenty_percent_reminder_time": ("<=", now)
+	}, fields=["name", "assignee"])
+
+	for item in items:
+		user_email = frappe.db.get_value("User", item.assignee, "email")
+		if user_email:
+			frappe.sendmail(
+				recipients=[user_email],
+				subject=f"Reminder: Work Item {item.name} nearing deadline",
+				message=f"You're at 20% remaining time for the Work Item <b>{item.name}</b>. Please plan accordingly.<br><a href='{frappe.utils.get_url()}/app/work-item/{item.name}'>View Work Item</a>",
+				now=True
+			)
+			frappe.db.set_value("Work Item", item.name, "twenty_percent_reminder_sent", 1)
+		else:
+			frappe.log_error("Work Item Reminder Error", f"User {item.assignee} does not have a valid email.")
