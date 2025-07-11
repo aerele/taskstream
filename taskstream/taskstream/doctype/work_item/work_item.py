@@ -166,7 +166,6 @@ def ensure_time(value):
 
 def send_twenty_percent_reminders():
 	now = now_datetime()
-	frappe.log_error(now)
 	items = frappe.get_all("Work Item", filters={
 		"status": "In Progress",
 		"twenty_percent_reminder_sent": 0,
