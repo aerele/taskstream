@@ -166,6 +166,14 @@ app_license = "mit"
 # 	],
 # }
 
+scheduler_events = {
+	"cron": {
+		"* * * * *": [
+			"taskstream.taskstream.doctype.work_item.work_item.send_twenty_percent_reminders"
+		]
+	}
+}
+
 # Testing
 # -------
 
