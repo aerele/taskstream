@@ -195,6 +195,12 @@ frappe.ui.form.on('Recurrence Time', {
 		}
 
 		update_recurrence_description(frm);
+	},
+	recurrence_time_add: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
+	},
+	recurrence_time_remove: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
 	}
 });
 
