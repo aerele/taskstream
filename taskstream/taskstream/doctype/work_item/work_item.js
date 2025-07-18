@@ -193,6 +193,8 @@ frappe.ui.form.on('Recurrence Time', {
 				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
 			}
 		}
+
+		update_recurrence_description(frm);
 	}
 });
 
@@ -212,9 +214,24 @@ function update_recurrence_description(frm) {
 		"Saturday": 6
 	};
 
+	let desc = "";
+
+	if (!weekdays.length) {
+		if (type === "Weekly") {
+			desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
+		} else if (type === "Monthly") {
+			desc = `Every ${freq} month${freq > 1 ? 's' : ''}`;
+		} else if (type === "Yearly") {
+			desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
+		}
+
+		frm.fields_dict.recurrence_frequency.set_description(desc);
+		frm.fields_dict.recurrence_day.set_description("");
+		return;
+	}
+
 	const sorted_days = weekdays.sort((a, b) => day_order[a] - day_order[b]);
 
-	let desc = "";
 	if (type === "Weekly") {
 		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
 	} else if (type === "Monthly") {
@@ -223,9 +240,7 @@ function update_recurrence_description(frm) {
 		desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
 	}
 
-	if (sorted_days.length) {
-		desc += " on " + sorted_days.join(", ");
-	}
+	desc += " on " + sorted_days.join(", ");
 
 	if (times.length) {
 		const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
@@ -233,4 +248,5 @@ function update_recurrence_description(frm) {
 	}
 
 	frm.fields_dict.recurrence_day.set_description(desc);
+	frm.fields_dict.recurrence_frequency.set_description("");
 }
