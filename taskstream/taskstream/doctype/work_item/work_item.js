@@ -6,7 +6,6 @@ frappe.ui.form.on('Work Item', {
 		if (frm.is_new() && !frm.doc.requested_by) {
 			frm.set_value('requested_by', frappe.session.user);
 		}
-		update_frequency_description(frm);
 	},
 
 	refresh: function (frm) {
@@ -135,12 +134,10 @@ frappe.ui.form.on('Work Item', {
 	},
 
 	recurrence_type(frm) {
-		update_frequency_description(frm);
 		update_recurrence_description(frm);
 	},
 
 	recurrence_frequency(frm) {
-		update_frequency_description(frm);
 		update_recurrence_description(frm);
 	},
 
@@ -198,22 +195,6 @@ frappe.ui.form.on('Recurrence Time', {
 		}
 	}
 });
-
-function update_frequency_description(frm) {
-	const type = frm.doc.recurrence_type;
-	const freq = frm.doc.recurrence_frequency || 1;
-
-	let desc = "";
-	if (type === "Weekly") {
-		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
-	} else if (type === "Monthly") {
-		desc = `Every ${freq} month${freq > 1 ? 's' : ''}`;
-	} else if (type === "Yearly") {
-		desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
-	}
-
-	frm.fields_dict.recurrence_frequency.set_description(desc);
-}
 
 function update_recurrence_description(frm) {
 	const freq = frm.doc.recurrence_frequency || 1;
