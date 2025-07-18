@@ -136,10 +136,16 @@ frappe.ui.form.on('Work Item', {
 
 	recurrence_type(frm) {
 		update_frequency_description(frm);
+		update_recurrence_description(frm);
 	},
 
 	recurrence_frequency(frm) {
 		update_frequency_description(frm);
+		update_recurrence_description(frm);
+	},
+
+	recurrence_day(frm) {
+		update_recurrence_description(frm);
 	},
 
 });
@@ -207,4 +213,43 @@ function update_frequency_description(frm) {
 	}
 
 	frm.fields_dict.recurrence_frequency.set_description(desc);
+}
+
+function update_recurrence_description(frm) {
+	const freq = frm.doc.recurrence_frequency || 1;
+	const type = frm.doc.recurrence_type || '';
+	const weekdays = (frm.doc.recurrence_day || []).map(r => r.weekday);
+	const times = (frm.doc.recurrence_time || []).map(r => r.recurrence_time);
+
+	const day_order = {
+		"Sunday": 0,
+		"Monday": 1,
+		"Tuesday": 2,
+		"Wednesday": 3,
+		"Thursday": 4,
+		"Friday": 5,
+		"Saturday": 6
+	};
+
+	const sorted_days = weekdays.sort((a, b) => day_order[a] - day_order[b]);
+
+	let desc = "";
+	if (type === "Weekly") {
+		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
+	} else if (type === "Monthly") {
+		desc = `Every ${freq} month${freq > 1 ? 's' : ''}`;
+	} else if (type === "Yearly") {
+		desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
+	}
+
+	if (sorted_days.length) {
+		desc += " on " + sorted_days.join(", ");
+	}
+
+	if (times.length) {
+		const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
+		desc += " at " + time_str.join(", ") + " hrs";
+	}
+
+	frm.fields_dict.recurrence_day.set_description(desc);
 }
