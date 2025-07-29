@@ -6,6 +6,7 @@ frappe.ui.form.on('Work Item', {
 		if (frm.is_new() && !frm.doc.requested_by) {
 			frm.set_value('requested_by', frappe.session.user);
 		}
+		update_recurrence_description(frm);
 	},
 
 	refresh: function (frm) {
@@ -112,6 +113,10 @@ frappe.ui.form.on('Work Item', {
 
 		const isDone = frm.doc.status === 'Done';
 		frm.set_df_property('actual_duration', 'read_only', isDone);
+	},
+
+	validate: function (frm) {
+		update_recurrence_description(frm);
 	},
 
 	is_critical: function (frm) {
