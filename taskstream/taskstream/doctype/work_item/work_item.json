@@ -24,6 +24,7 @@
   "recurrence_score_details_section",
   "recurrence_details_column",
   "recurrence_type",
+  "recurrence_frequency",
   "recurrence_day",
   "recurrence_month",
   "recurrence_date",
@@ -249,12 +250,20 @@
    "fieldname": "deadline_reminder_sent",
    "fieldtype": "Check",
    "label": "Deadline Reminder Sent"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: !['One Time', 'Daily'].includes(doc.recurrence_type)",
+   "fieldname": "recurrence_frequency",
+   "fieldtype": "Int",
+   "label": "Recurrence Frequency",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-11 17:56:21.661219",
+ "modified": "2025-07-18 10:58:25.215145",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

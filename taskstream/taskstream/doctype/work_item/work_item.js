@@ -6,6 +6,7 @@ frappe.ui.form.on('Work Item', {
 		if (frm.is_new() && !frm.doc.requested_by) {
 			frm.set_value('requested_by', frappe.session.user);
 		}
+		update_recurrence_description(frm);
 	},
 
 	refresh: function (frm) {
@@ -114,6 +115,10 @@ frappe.ui.form.on('Work Item', {
 		frm.set_df_property('actual_duration', 'read_only', isDone);
 	},
 
+	validate: function (frm) {
+		update_recurrence_description(frm);
+	},
+
 	is_critical: function (frm) {
 		if (frm.doc.is_critical && !frm.doc.reviewer) {
 			frm.set_value('reviewer', frappe.session.user);
@@ -131,7 +136,20 @@ frappe.ui.form.on('Work Item', {
 		if (frm.doc.reviewer == frm.doc.assignee) {
 			frappe.throw("Assignee cannot be same as the Reviewer")
 		}
-	}
+	},
+
+	recurrence_type(frm) {
+		update_recurrence_description(frm);
+	},
+
+	recurrence_frequency(frm) {
+		update_recurrence_description(frm);
+	},
+
+	recurrence_day(frm) {
+		update_recurrence_description(frm);
+	},
+
 });
 
 frappe.ui.form.on('Recurrence Date', {
@@ -180,5 +198,66 @@ frappe.ui.form.on('Recurrence Time', {
 				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
 			}
 		}
+
+		update_recurrence_description(frm);
+	},
+	recurrence_time_add: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
+	},
+	recurrence_time_remove: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
 	}
 });
+
+function update_recurrence_description(frm) {
+	const freq = frm.doc.recurrence_frequency || 1;
+	const type = frm.doc.recurrence_type || '';
+	const weekdays = (frm.doc.recurrence_day || []).map(r => r.weekday);
+	const times = (frm.doc.recurrence_time || []).map(r => r.recurrence_time);
+
+	const day_order = {
+		"Sunday": 0,
+		"Monday": 1,
+		"Tuesday": 2,
+		"Wednesday": 3,
+		"Thursday": 4,
+		"Friday": 5,
+		"Saturday": 6
+	};
+
+	let desc = "";
+
+	if (!weekdays.length) {
+		if (type === "Weekly") {
+			desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
+		} else if (type === "Monthly") {
+			desc = `Every ${freq} month${freq > 1 ? 's' : ''}`;
+		} else if (type === "Yearly") {
+			desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
+		}
+
+		frm.fields_dict.recurrence_frequency.set_description(desc);
+		frm.fields_dict.recurrence_day.set_description("");
+		return;
+	}
+
+	const sorted_days = weekdays.sort((a, b) => day_order[a] - day_order[b]);
+
+	if (type === "Weekly") {
+		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
+	} else if (type === "Monthly") {
+		desc = `Every ${freq} month${freq > 1 ? 's' : ''}`;
+	} else if (type === "Yearly") {
+		desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
+	}
+
+	desc += " on " + sorted_days.join(", ");
+
+	if (times.length) {
+		const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
+		desc += " at " + time_str.join(", ") + " hrs";
+	}
+
+	frm.fields_dict.recurrence_day.set_description(desc);
+	frm.fields_dict.recurrence_frequency.set_description("");
+}
