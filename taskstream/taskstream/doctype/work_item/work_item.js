@@ -251,15 +251,10 @@ function update_recurrence_description(frm) {
 	};
 
 	let desc = "";
-
-	if (!weekdays.length) {
-		if (type === "Weekly") {
-			desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
-		} else if (type === "Monthly") {
-			desc = `Every ${freq} month${freq > 1 ? 's' : ''}`;
-		} else if (type === "Yearly") {
-			desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
-		}
+	
+	if (type === "Weekly" && !weekdays.length) {
+		console.log("triggered")
+		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
 
 		frm.fields_dict.recurrence_frequency.set_description(desc);
 		frm.fields_dict.recurrence_day.set_description("");
