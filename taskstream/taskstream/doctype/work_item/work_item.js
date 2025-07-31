@@ -149,7 +149,9 @@ frappe.ui.form.on('Work Item', {
 	recurrence_day(frm) {
 		update_recurrence_description(frm);
 	},
-
+	monthly_recurrence_based_on(frm) {
+		update_recurrence_description(frm);
+	}
 });
 
 frappe.ui.form.on('Recurrence Date', {
@@ -176,6 +178,14 @@ frappe.ui.form.on('Recurrence Date', {
 				frappe.model.set_value(cdt, cdn, 'recurrence_date', '');
 			}
 		}
+
+		update_recurrence_description(frm);
+	},
+	recurrence_date_add: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
+	},
+	recurrence_date_remove: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
 	}
 });
 
@@ -205,6 +215,21 @@ frappe.ui.form.on('Recurrence Time', {
 		update_recurrence_description(frm);
 	},
 	recurrence_time_remove: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
+	}
+});
+
+frappe.ui.form.on('Recurrence Day Occurrence', {
+	weekday: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
+	},
+	week_order: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
+	},
+	recurrence_day_occurrence_add: function (frm, cdt, cdn) {
+		update_recurrence_description(frm);
+	},
+	recurrence_day_occurrence_remove: function (frm, cdt, cdn) {
 		update_recurrence_description(frm);
 	}
 });
@@ -246,7 +271,52 @@ function update_recurrence_description(frm) {
 	if (type === "Weekly") {
 		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
 	} else if (type === "Monthly") {
-		desc = `Every ${freq} month${freq > 1 ? 's' : ''}`;
+		console.log("Monthly recurrence based on Date or Day");
+		const freq_text = `Every ${freq} month${freq > 1 ? 's' : ''}`;
+		let description = freq_text;
+
+		if (frm.doc.monthly_recurrence_based_on === "Date") {
+			const dates = (frm.doc.recurrence_date || []).map(d => d.recurrence_date);
+			const times = (frm.doc.recurrence_time || []).map(d => d.recurrence_time);
+
+			if (dates.length) {
+				description += " on " + dates.join(", ");
+			}
+			if (times.length) {
+				const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
+				description += " at " + time_str.join(", ") + " hrs";
+			}
+
+			console.log("Monthly recurrence based on Date");
+			frm.fields_dict.monthly_recurrence_based_on.set_description(description);
+			frm.fields_dict.recurrence_frequency.set_description("");
+			frm.fields_dict.recurrence_day?.set_description("");
+		}
+
+		else if (frm.doc.monthly_recurrence_based_on === "Day") {
+			const occurrences = (frm.doc.recurrence_day_occurrence || []).map(d => `${d.week_order} ${d.weekday}`);
+			const times = (frm.doc.recurrence_time || []).map(d => d.recurrence_time);
+
+			if (occurrences.length) {
+				description += " on " + occurrences.join(", ");
+			}
+			if (times.length) {
+				const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
+				description += " at " + time_str.join(", ") + " hrs";
+			}
+
+			console.log("Monthly recurrence based on Day");
+			frm.fields_dict.monthly_recurrence_based_on.set_description(description);
+			frm.fields_dict.recurrence_frequency.set_description("");
+			frm.fields_dict.recurrence_day?.set_description("");
+		}
+		else {
+			// fallback if none selected
+			console.log("Fallback");
+			frm.fields_dict.recurrence_frequency.set_description(freq_text);
+			frm.fields_dict.monthly_recurrence_based_on.set_description("");
+		}
+		return;
 	} else if (type === "Yearly") {
 		desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
 	}
