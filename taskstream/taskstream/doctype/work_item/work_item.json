@@ -212,7 +212,7 @@
    "options": "Recurrence Time"
   },
   {
-   "depends_on": "eval: doc.recurrence_type == 'Yearly' || doc.monthly_recurrence_based_on == 'Date'",
+   "depends_on": "eval: doc.recurrence_type == 'Monthly' && doc.monthly_recurrence_based_on == 'Date'",
    "fieldname": "recurrence_date",
    "fieldtype": "Table",
    "label": "Recurrence Date",
@@ -269,7 +269,7 @@
    "options": "Date\nDay"
   },
   {
-   "depends_on": "eval: doc.monthly_recurrence_based_on == 'Day'",
+   "depends_on": "eval: doc.recurrence_type == 'Monthly' && doc.monthly_recurrence_based_on == 'Day'",
    "fieldname": "recurrence_day_occurrence",
    "fieldtype": "Table",
    "label": "Recurrence Day Occurrence",
@@ -279,7 +279,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-31 16:29:31.655636",
+ "modified": "2025-07-31 17:51:01.417355",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
