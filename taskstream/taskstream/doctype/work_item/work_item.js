@@ -251,13 +251,19 @@ function update_recurrence_description(frm) {
 	};
 
 	let desc = "";
-	
+
 	if (type === "Weekly" && !weekdays.length) {
 		console.log("triggered")
 		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
 
 		frm.fields_dict.recurrence_frequency.set_description(desc);
 		frm.fields_dict.recurrence_day.set_description("");
+		return;
+	} else if (type === "Monthly" && !frm.doc.recurrence_date.length && !frm.doc.recurrence_day_occurrence.length) {
+		desc = `Every ${freq} month${freq > 1 ? 's' : ''}`;
+
+		frm.fields_dict.recurrence_frequency.set_description(desc);
+		frm.fields_dict.monthly_recurrence_based_on.set_description("");
 		return;
 	}
 
@@ -271,10 +277,11 @@ function update_recurrence_description(frm) {
 		let description = freq_text;
 
 		if (frm.doc.monthly_recurrence_based_on === "Date") {
-			const dates = (frm.doc.recurrence_date || []).map(d => d.recurrence_date);
+			const raw_dates = frm.doc.recurrence_date || [];
+			const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
 			const times = (frm.doc.recurrence_time || []).map(d => d.recurrence_time);
 
-			if (dates.length) {
+			if (dates.length > 0) {
 				description += " on " + dates.join(", ");
 			}
 			if (times.length) {
