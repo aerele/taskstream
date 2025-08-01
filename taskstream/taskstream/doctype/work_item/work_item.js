@@ -191,27 +191,11 @@ frappe.ui.form.on('Recurrence Date', {
 
 frappe.ui.form.on('Recurrence Time', {
 	recurrence_time: function (frm, cdt, cdn) {
-		let row = locals[cdt][cdn];
-		let val = row.recurrence_time;
-
-		if (val) {
-			let is_duplicate = false;
-
-			frm.doc.recurrence_time.forEach(d => {
-				if (d.name !== row.name && d.recurrence_time === val) {
-					is_duplicate = true;
-				}
-			});
-
-			if (is_duplicate) {
-				frappe.msgprint(__('Recurrence time cannot be repeated!'));
-				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
-			}
-		}
-
+		validate_recurrence_time(frm, cdt, cdn);
 		update_recurrence_description(frm);
 	},
 	recurrence_time_add: function (frm, cdt, cdn) {
+		validate_recurrence_time(frm, cdt, cdn);
 		update_recurrence_description(frm);
 	},
 	recurrence_time_remove: function (frm, cdt, cdn) {
@@ -233,6 +217,29 @@ frappe.ui.form.on('Recurrence Day Occurrence', {
 		update_recurrence_description(frm);
 	}
 });
+
+function validate_recurrence_time(frm, cdt, cdn) {
+	let row = locals[cdt][cdn];
+		let val = row.recurrence_time;
+
+		if (val) {
+			let is_duplicate = false;
+
+			frm.doc.recurrence_time.forEach(d => {
+				if (d.name !== row.name && d.recurrence_time === val) {
+					is_duplicate = true;
+				}
+			});
+
+			if (is_duplicate && val == 10) {
+				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+			}
+			else if (is_duplicate) {
+				frappe.msgprint(__('Recurrence time cannot be repeated!'));
+				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+			}
+		}
+}
 
 function update_recurrence_description(frm) {
 	const freq = frm.doc.recurrence_frequency || 1;
