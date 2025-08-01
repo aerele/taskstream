@@ -277,10 +277,11 @@ function update_recurrence_description(frm) {
 		let description = freq_text;
 
 		if (frm.doc.monthly_recurrence_based_on === "Date") {
-			const dates = (frm.doc.recurrence_date || []).map(d => d.recurrence_date);
+			const raw_dates = frm.doc.recurrence_date || [];
+			const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
 			const times = (frm.doc.recurrence_time || []).map(d => d.recurrence_time);
 
-			if (dates.length) {
+			if (dates.length > 0) {
 				description += " on " + dates.join(", ");
 			}
 			if (times.length) {
