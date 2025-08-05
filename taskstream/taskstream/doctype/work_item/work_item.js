@@ -245,7 +245,8 @@ function update_recurrence_description(frm) {
 	const freq = frm.doc.recurrence_frequency || 1;
 	const type = frm.doc.recurrence_type || '';
 	const weekdays = (frm.doc.recurrence_day || []).map(r => r.weekday);
-	const times = (frm.doc.recurrence_time || []).map(r => r.recurrence_time);
+	const times_raw = frm.doc.recurrence_time || [];
+	const times = times_raw.map(d => d.recurrence_time).filter(Boolean);
 
 	const day_order = {
 		"Sunday": 0,
@@ -286,12 +287,13 @@ function update_recurrence_description(frm) {
 		if (frm.doc.monthly_recurrence_based_on === "Date") {
 			const raw_dates = frm.doc.recurrence_date || [];
 			const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
-			const times = (frm.doc.recurrence_time || []).map(d => d.recurrence_time);
+			const raw_times = frm.doc.recurrence_time || [];
+			const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
 
 			if (dates.length > 0) {
 				description += " on " + dates.join(", ");
 			}
-			if (times.length) {
+			if (times.length > 0) {
 				const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
 				description += " at " + time_str.join(", ") + " hrs";
 			}
@@ -332,7 +334,7 @@ function update_recurrence_description(frm) {
 
 	desc += " on " + sorted_days.join(", ");
 
-	if (times.length) {
+	if (times.length > 0) {
 		const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
 		desc += " at " + time_str.join(", ") + " hrs";
 	}
