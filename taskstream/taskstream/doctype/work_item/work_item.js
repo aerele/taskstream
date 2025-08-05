@@ -191,27 +191,11 @@ frappe.ui.form.on('Recurrence Date', {
 
 frappe.ui.form.on('Recurrence Time', {
 	recurrence_time: function (frm, cdt, cdn) {
-		let row = locals[cdt][cdn];
-		let val = row.recurrence_time;
-
-		if (val) {
-			let is_duplicate = false;
-
-			frm.doc.recurrence_time.forEach(d => {
-				if (d.name !== row.name && d.recurrence_time === val) {
-					is_duplicate = true;
-				}
-			});
-
-			if (is_duplicate) {
-				frappe.msgprint(__('Recurrence time cannot be repeated!'));
-				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
-			}
-		}
-
+		validate_recurrence_time(frm, cdt, cdn);
 		update_recurrence_description(frm);
 	},
 	recurrence_time_add: function (frm, cdt, cdn) {
+		validate_recurrence_time(frm, cdt, cdn);
 		update_recurrence_description(frm);
 	},
 	recurrence_time_remove: function (frm, cdt, cdn) {
@@ -234,11 +218,35 @@ frappe.ui.form.on('Recurrence Day Occurrence', {
 	}
 });
 
+function validate_recurrence_time(frm, cdt, cdn) {
+	let row = locals[cdt][cdn];
+		let val = row.recurrence_time;
+
+		if (val) {
+			let is_duplicate = false;
+
+			frm.doc.recurrence_time.forEach(d => {
+				if (d.name !== row.name && d.recurrence_time === val) {
+					is_duplicate = true;
+				}
+			});
+
+			if (is_duplicate && val == 10) {
+				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+			}
+			else if (is_duplicate) {
+				frappe.msgprint(__('Recurrence time cannot be repeated!'));
+				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+			}
+		}
+}
+
 function update_recurrence_description(frm) {
 	const freq = frm.doc.recurrence_frequency || 1;
 	const type = frm.doc.recurrence_type || '';
 	const weekdays = (frm.doc.recurrence_day || []).map(r => r.weekday);
-	const times = (frm.doc.recurrence_time || []).map(r => r.recurrence_time);
+	const times_raw = frm.doc.recurrence_time || [];
+	const times = times_raw.map(d => d.recurrence_time).filter(Boolean);
 
 	const day_order = {
 		"Sunday": 0,
@@ -279,12 +287,13 @@ function update_recurrence_description(frm) {
 		if (frm.doc.monthly_recurrence_based_on === "Date") {
 			const raw_dates = frm.doc.recurrence_date || [];
 			const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
-			const times = (frm.doc.recurrence_time || []).map(d => d.recurrence_time);
+			const raw_times = frm.doc.recurrence_time || [];
+			const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
 
 			if (dates.length > 0) {
 				description += " on " + dates.join(", ");
 			}
-			if (times.length) {
+			if (times.length > 0) {
 				const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
 				description += " at " + time_str.join(", ") + " hrs";
 			}
@@ -325,7 +334,7 @@ function update_recurrence_description(frm) {
 
 	desc += " on " + sorted_days.join(", ");
 
-	if (times.length) {
+	if (times.length > 0) {
 		const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
 		desc += " at " + time_str.join(", ") + " hrs";
 	}
