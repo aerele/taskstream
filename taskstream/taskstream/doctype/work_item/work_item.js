@@ -223,25 +223,25 @@ frappe.ui.form.on('Recurrence Day Occurrence', {
 
 function validate_recurrence_time(frm, cdt, cdn) {
 	let row = locals[cdt][cdn];
-		let val = row.recurrence_time;
+	let val = row.recurrence_time;
 
-		if (val) {
-			let is_duplicate = false;
+	if (val) {
+		let is_duplicate = false;
 
-			frm.doc.recurrence_time.forEach(d => {
-				if (d.name !== row.name && d.recurrence_time === val) {
-					is_duplicate = true;
-				}
-			});
-
-			if (is_duplicate && val == 10) {
-				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+		frm.doc.recurrence_time.forEach(d => {
+			if (d.name !== row.name && d.recurrence_time === val) {
+				is_duplicate = true;
 			}
-			else if (is_duplicate) {
-				frappe.msgprint(__('Recurrence time cannot be repeated!'));
-				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
-			}
+		});
+
+		if (is_duplicate && val == 10) {
+			frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
 		}
+		else if (is_duplicate) {
+			frappe.msgprint(__('Recurrence time cannot be repeated!'));
+			frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+		}
+	}
 }
 
 function update_recurrence_description(frm) {
@@ -297,13 +297,13 @@ function update_recurrence_description(frm) {
 			// const raw_dates = frm.doc.recurrence_date || [];
 			// const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
 			const dates = (frm.doc.recurrence_date || [])
-			.map(d => d.recurrence_date)
-			.filter(Boolean);
+				.map(d => d.recurrence_date)
+				.filter(Boolean);
 			// const raw_times = frm.doc.recurrence_time || [];
 			// const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
 			const times = (frm.doc.recurrence_time || [])
-			.map(d => d.recurrence_time)
-			.filter(Boolean);
+				.map(d => d.recurrence_time)
+				.filter(Boolean);
 
 			if (dates.length > 0) {
 				description += " on " + dates.join(", ");
