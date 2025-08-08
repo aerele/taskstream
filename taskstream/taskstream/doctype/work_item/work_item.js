@@ -294,10 +294,16 @@ function update_recurrence_description(frm) {
 		let description = freq_text;
 
 		if (frm.doc.monthly_recurrence_based_on === "Date") {
-			const raw_dates = frm.doc.recurrence_date || [];
-			const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
-			const raw_times = frm.doc.recurrence_time || [];
-			const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
+			// const raw_dates = frm.doc.recurrence_date || [];
+			// const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
+			const dates = (frm.doc.recurrence_date || [])
+			.map(d => d.recurrence_date)
+			.filter(Boolean);
+			// const raw_times = frm.doc.recurrence_time || [];
+			// const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
+			const times = (frm.doc.recurrence_time || [])
+			.map(d => d.recurrence_time)
+			.filter(Boolean);
 
 			if (dates.length > 0) {
 				description += " on " + dates.join(", ");
@@ -364,8 +370,11 @@ function update_recurrence_description(frm) {
 		}
 		// 	description += " in " + months.join(", ");
 		// }
-		const raw_dates = frm.doc.recurrence_date || [];
-		const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
+		// const raw_dates = frm.doc.recurrence_date || [];
+		// const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
+		const dates = (frm.doc.recurrence_date || [])
+			.map(d => d.recurrence_date)
+			.filter(Boolean);
 		// const raw_times = frm.doc.recurrence_time || [];
 		// const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
 
