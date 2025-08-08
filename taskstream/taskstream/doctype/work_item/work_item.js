@@ -223,25 +223,25 @@ frappe.ui.form.on('Recurrence Day Occurrence', {
 
 function validate_recurrence_time(frm, cdt, cdn) {
 	let row = locals[cdt][cdn];
-		let val = row.recurrence_time;
+	let val = row.recurrence_time;
 
-		if (val) {
-			let is_duplicate = false;
+	if (val) {
+		let is_duplicate = false;
 
-			frm.doc.recurrence_time.forEach(d => {
-				if (d.name !== row.name && d.recurrence_time === val) {
-					is_duplicate = true;
-				}
-			});
-
-			if (is_duplicate && val == 10) {
-				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+		frm.doc.recurrence_time.forEach(d => {
+			if (d.name !== row.name && d.recurrence_time === val) {
+				is_duplicate = true;
 			}
-			else if (is_duplicate) {
-				frappe.msgprint(__('Recurrence time cannot be repeated!'));
-				frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
-			}
+		});
+
+		if (is_duplicate && val == 10) {
+			frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
 		}
+		else if (is_duplicate) {
+			frappe.msgprint(__('Recurrence time cannot be repeated!'));
+			frappe.model.set_value(cdt, cdn, 'recurrence_time', '');
+		}
+	}
 }
 
 function update_recurrence_description(frm) {
@@ -264,7 +264,6 @@ function update_recurrence_description(frm) {
 	let desc = "";
 
 	if (type === "Weekly" && !weekdays.length) {
-		console.log("triggered")
 		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
 
 		frm.fields_dict.recurrence_frequency.set_description(desc);
@@ -289,15 +288,16 @@ function update_recurrence_description(frm) {
 	if (type === "Weekly") {
 		desc = `Every ${freq} week${freq > 1 ? 's' : ''}`;
 	} else if (type === "Monthly") {
-		console.log("Monthly recurrence based on Date or Day");
 		const freq_text = `Every ${freq} month${freq > 1 ? 's' : ''}`;
 		let description = freq_text;
 
 		if (frm.doc.monthly_recurrence_based_on === "Date") {
-			const raw_dates = frm.doc.recurrence_date || [];
-			const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
-			const raw_times = frm.doc.recurrence_time || [];
-			const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
+			const dates = (frm.doc.recurrence_date || [])
+				.map(d => d.recurrence_date)
+				.filter(Boolean);
+			const times = (frm.doc.recurrence_time || [])
+				.map(d => d.recurrence_time)
+				.filter(Boolean);
 
 			if (dates.length > 0) {
 				description += " on " + dates.join(", ");
@@ -307,7 +307,6 @@ function update_recurrence_description(frm) {
 				description += " at " + time_str.join(", ") + " hrs";
 			}
 
-			console.log("Monthly recurrence based on Date");
 			frm.fields_dict.monthly_recurrence_based_on.set_description(description);
 			frm.fields_dict.recurrence_frequency.set_description("");
 			frm.fields_dict.recurrence_day?.set_description("");
@@ -325,55 +324,41 @@ function update_recurrence_description(frm) {
 				description += " at " + time_str.join(", ") + " hrs";
 			}
 
-			console.log("Monthly recurrence based on Day");
 			frm.fields_dict.monthly_recurrence_based_on.set_description(description);
 			frm.fields_dict.recurrence_frequency.set_description("");
 			frm.fields_dict.recurrence_day?.set_description("");
 		}
 		else {
-			// fallback if none selected
-			console.log("Fallback");
 			frm.fields_dict.recurrence_frequency.set_description(freq_text);
 			frm.fields_dict.monthly_recurrence_based_on.set_description("");
 		}
 		return;
-		// } else if (type === "Yearly") {
-		// 	desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
-		// }
 	} else if (type === "Yearly") {
-		console.log("Yearly recurrence based on Month and Time");
 		const freq_text = `Every ${freq} year${freq > 1 ? 's' : ''}`;
 		let description = freq_text;
 
-		// Extract and format months
 		const months = (frm.doc.recurrence_month || [])
 			.map(d => d.month)
 			.filter(Boolean);
 
 		if (months.length > 0) {
-			// Month order reference
 			const monthOrder = [
 				"January", "February", "March", "April", "May", "June",
 				"July", "August", "September", "October", "November", "December"
 			];
 
-			// Sort months by calendar order
 			months.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
 
 			description += " in " + months.join(", ");
 		}
-		// 	description += " in " + months.join(", ");
-		// }
-		const raw_dates = frm.doc.recurrence_date || [];
-		const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
-		// const raw_times = frm.doc.recurrence_time || [];
-		// const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
+		const dates = (frm.doc.recurrence_date || [])
+			.map(d => d.recurrence_date)
+			.filter(Boolean);
 
 		if (dates.length > 0) {
 			description += " on " + dates.join(", ");
 		}
 
-		// Extract and format times
 		const times = (frm.doc.recurrence_time || [])
 			.map(d => d.recurrence_time)
 			.filter(Boolean);
