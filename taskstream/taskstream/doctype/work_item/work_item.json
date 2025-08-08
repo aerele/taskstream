@@ -212,7 +212,7 @@
    "options": "Recurrence Time"
   },
   {
-   "depends_on": "eval: doc.recurrence_type == 'Monthly' && doc.monthly_recurrence_based_on == 'Date'",
+   "depends_on": "eval: (doc.recurrence_type == 'Monthly' && doc.monthly_recurrence_based_on == 'Date') || (doc.recurrence_type == 'Yearly')",
    "fieldname": "recurrence_date",
    "fieldtype": "Table",
    "label": "Recurrence Date",
@@ -279,7 +279,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-31 17:51:01.417355",
+ "modified": "2025-08-08 13:55:40.927379",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
