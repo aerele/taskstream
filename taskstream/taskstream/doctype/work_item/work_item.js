@@ -151,6 +151,9 @@ frappe.ui.form.on('Work Item', {
 	},
 	monthly_recurrence_based_on(frm) {
 		update_recurrence_description(frm);
+	},
+	recurrence_month(frm) {
+		update_recurrence_description(frm);
 	}
 });
 
@@ -273,6 +276,12 @@ function update_recurrence_description(frm) {
 		frm.fields_dict.recurrence_frequency.set_description(desc);
 		frm.fields_dict.monthly_recurrence_based_on.set_description("");
 		return;
+	} else if (type === "Yearly" && !frm.doc.recurrence_month.length && !frm.doc.recurrence_time.length) {
+		desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
+
+		frm.fields_dict.recurrence_frequency.set_description(desc);
+		frm.fields_dict.recurrence_month.set_description("");
+		return;
 	}
 
 	const sorted_days = weekdays.sort((a, b) => day_order[a] - day_order[b]);
@@ -328,8 +337,54 @@ function update_recurrence_description(frm) {
 			frm.fields_dict.monthly_recurrence_based_on.set_description("");
 		}
 		return;
+		// } else if (type === "Yearly") {
+		// 	desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
+		// }
 	} else if (type === "Yearly") {
-		desc = `Every ${freq} year${freq > 1 ? 's' : ''}`;
+		console.log("Yearly recurrence based on Month and Time");
+		const freq_text = `Every ${freq} year${freq > 1 ? 's' : ''}`;
+		let description = freq_text;
+
+		// Extract and format months
+		const months = (frm.doc.recurrence_month || [])
+			.map(d => d.month)
+			.filter(Boolean);
+
+		if (months.length > 0) {
+			// Month order reference
+			const monthOrder = [
+				"January", "February", "March", "April", "May", "June",
+				"July", "August", "September", "October", "November", "December"
+			];
+
+			// Sort months by calendar order
+			months.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
+
+			description += " in " + months.join(", ");
+		}
+		// 	description += " in " + months.join(", ");
+		// }
+		const raw_dates = frm.doc.recurrence_date || [];
+		const dates = raw_dates.map(d => d.recurrence_date).filter(Boolean);
+		// const raw_times = frm.doc.recurrence_time || [];
+		// const times = raw_times.map(d => d.recurrence_time).filter(Boolean);
+
+		if (dates.length > 0) {
+			description += " on " + dates.join(", ");
+		}
+
+		// Extract and format times
+		const times = (frm.doc.recurrence_time || [])
+			.map(d => d.recurrence_time)
+			.filter(Boolean);
+
+		if (times.length > 0) {
+			const time_str = times.sort((a, b) => a - b).map(h => `${h}:00`);
+			description += " at " + time_str.join(", ") + " hrs";
+		}
+
+		frm.fields_dict.recurrence_frequency.set_description("");
+		frm.fields_dict.recurrence_month.set_description(description);
 	}
 
 	desc += " on " + sorted_days.join(", ");
