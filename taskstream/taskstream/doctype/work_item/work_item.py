@@ -15,6 +15,9 @@ class WorkItem(Document):
 
 		if self.status == "In Progress" and self.start_time and self.estimated_duration:
 			calculate_planned_target(self)
+		
+		if self.status == "Done":
+			calculate_score(self)
 
 	def update_revision_count(self):
 		if self.name and not self.is_new():
@@ -205,3 +208,25 @@ def send_deadline_reminders():
 			frappe.db.set_value("Work Item", item.name, "deadline_reminder_sent", 1)
 		else:
 			frappe.log_error("Deadline Reminder Error", f"User {item.assignee} has no valid email.")
+
+def calculate_score(doc):
+	if doc.status == "Done":
+		doc.score = 60
+
+		if doc.estimated_duration and doc.actual_duration:
+			estimated = doc.estimated_duration
+			actual = doc.actual_duration
+			if actual > estimated:
+				return
+			revisions = doc.revision_count or 0
+
+			if actual == 0:
+				extra_time_ratio = 0
+			else:
+				extra_time_ratio = max((estimated - actual) / actual, 0)
+
+			penalty_percent = revisions * extra_time_ratio
+			on_time_score = 40 - (penalty_percent * 40)
+			on_time_score = max(min(on_time_score, 40), 0)
+
+			doc.score += round(on_time_score, 2)
