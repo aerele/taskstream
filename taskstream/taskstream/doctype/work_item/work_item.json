@@ -15,6 +15,7 @@
   "status",
   "is_critical",
   "reviewer",
+  "next_remainders",
   "timings_section",
   "initial_details_column",
   "estimated_duration",
@@ -41,7 +42,8 @@
   "planned_end",
   "twenty_percent_reminder_time",
   "twenty_percent_reminder_sent",
-  "deadline_reminder_sent"
+  "deadline_reminder_sent",
+  "isnotfirstsave"
  ],
  "fields": [
   {
@@ -216,7 +218,7 @@
    "fieldname": "recurrence_date",
    "fieldtype": "Table",
    "label": "Recurrence Date",
-   "mandatory_depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type)",
+   "mandatory_depends_on": "eval:['Yearly'].includes(doc.recurrence_type)",
    "options": "Recurrence Date"
   },
   {
@@ -274,12 +276,25 @@
    "fieldtype": "Table",
    "label": "Recurrence Day Occurrence",
    "options": "Recurrence Day Occurrence"
+  },
+  {
+   "fieldname": "next_remainders",
+   "fieldtype": "Table",
+   "label": "Next Remainders",
+   "options": "Next remaiders",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "isnotfirstsave",
+   "fieldtype": "Check",
+   "label": "IsNotFirstSave"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-08-08 13:55:40.927379",
+ "modified": "2025-10-07 13:04:28.046728",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
@@ -295,6 +310,31 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Guest",
    "share": 1,
    "write": 1
   }
