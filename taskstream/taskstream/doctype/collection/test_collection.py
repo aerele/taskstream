@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestWorkItemConfiguration(FrappeTestCase):
+class TestCollection(FrappeTestCase):
 	pass

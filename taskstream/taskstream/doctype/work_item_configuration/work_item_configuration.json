@@ -1,108 +1,95 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:shift",
- "creation": "2025-07-04 12:24:22.450817",
+ "creation": "2026-01-06 17:57:25.419744",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_bco5",
-  "amended_from",
-  "shift",
-  "lunch_start_time",
-  "lunch_end_time"
+  "recurrence_creation_limit",
+  "max_delay_penalty",
+  "max_rework_penalty",
+  "penalty_points_per_day",
+  "penalty_per_minute",
+  "sent_reminder_before",
+  "notification_tab",
+  "email_alert",
+  "system_notification"
  ],
  "fields": [
   {
-   "fieldname": "section_break_bco5",
-   "fieldtype": "Section Break"
+   "fieldname": "max_delay_penalty",
+   "fieldtype": "Float",
+   "label": "Max Delay Penalty"
   },
   {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Work Item Configuration",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
+   "fieldname": "max_rework_penalty",
+   "fieldtype": "Float",
+   "label": "Max Rework Penalty"
   },
   {
-   "fieldname": "shift",
-   "fieldtype": "Link",
-   "label": "Shift",
-   "options": "Shift Type",
-   "unique": 1
+   "fieldname": "penalty_points_per_day",
+   "fieldtype": "Float",
+   "label": "Penalty points per day"
   },
   {
-   "fieldname": "lunch_start_time",
+   "fieldname": "penalty_per_minute",
+   "fieldtype": "Float",
+   "label": "Penalty Per Minute",
+   "precision": "9"
+  },
+  {
+   "fieldname": "recurrence_creation_limit",
+   "fieldtype": "Int",
+   "label": "Recurrence Creation Limit"
+  },
+  {
+   "description": "Hours before a Reminder should be sent before the deadline.",
+   "fieldname": "sent_reminder_before",
    "fieldtype": "Time",
-   "label": "Lunch Start Time"
+   "label": "Sent Reminder Before"
   },
   {
-   "fieldname": "lunch_end_time",
-   "fieldtype": "Time",
-   "label": "Lunch End Time"
+   "fieldname": "notification_tab",
+   "fieldtype": "Tab Break",
+   "label": "Notification"
+  },
+  {
+   "default": "0",
+   "fieldname": "email_alert",
+   "fieldtype": "Check",
+   "label": "Email Alert"
+  },
+  {
+   "default": "0",
+   "fieldname": "system_notification",
+   "fieldtype": "Check",
+   "label": "System Notification"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "issingle": 1,
  "links": [],
- "modified": "2025-07-04 13:03:04.545055",
+ "modified": "2026-01-08 19:13:44.177681",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Configuration",
- "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
    "create": 1,
    "delete": 1,
    "email": 1,
-   "export": 1,
    "print": 1,
    "read": 1,
-   "report": 1,
    "role": "System Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "HR Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Employee",
-   "share": 1
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "HR User",
    "share": 1,
    "write": 1
   }
  ],
  "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "states": []
 }

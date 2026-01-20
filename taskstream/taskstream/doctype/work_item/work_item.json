@@ -9,17 +9,19 @@
   "basic_details_section",
   "requested_by",
   "assignee",
+  "report_to",
   "summary",
-  "description",
-  "column_break_znmq",
   "status",
+  "first_mail",
+  "column_break_znmq",
   "is_critical",
   "reviewer",
+  "description",
+  "reference_doctype",
+  "reference_document",
   "timings_section",
   "initial_details_column",
-  "estimated_duration",
-  "start_time",
-  "column_break_xgpa",
+  "activities",
   "actual_duration",
   "recurrence_score_details_section",
   "recurrence_details_column",
@@ -33,12 +35,9 @@
   "recurrence_time",
   "repeat_until",
   "column_break_fyin",
-  "revision_count",
-  "completion_percent",
+  "rework_count",
   "score",
-  "amended_from",
   "internal_section_section",
-  "planned_end",
   "twenty_percent_reminder_time",
   "twenty_percent_reminder_sent",
   "deadline_reminder_sent"
@@ -54,6 +53,7 @@
   {
    "fieldname": "assignee",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Assign To",
    "options": "User",
    "reqd": 1
@@ -68,14 +68,6 @@
    "fieldname": "description",
    "fieldtype": "Text",
    "label": "Description"
-  },
-  {
-   "default": "0",
-   "fieldname": "revision_count",
-   "fieldtype": "Int",
-   "label": "Revision Count",
-   "non_negative": 1,
-   "read_only": 1
   },
   {
    "default": "One Time",
@@ -95,6 +87,7 @@
    "fieldname": "reviewer",
    "fieldtype": "Link",
    "label": "Reviewer",
+   "mandatory_depends_on": "is_critical",
    "options": "User"
   },
   {
@@ -112,31 +105,6 @@
    "precision": "2"
   },
   {
-   "fieldname": "completion_percent",
-   "fieldtype": "Percent",
-   "label": "Completion %",
-   "precision": "3"
-  },
-  {
-   "fieldname": "estimated_duration",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "label": "Estimated Duration (in hours)",
-   "non_negative": 1,
-   "placeholder": "0.00",
-   "precision": "2",
-   "reqd": 1
-  },
-  {
-   "depends_on": "eval: doc.status != 'To Do'",
-   "fieldname": "actual_duration",
-   "fieldtype": "Float",
-   "label": "Actual Duration (in hours)",
-   "non_negative": 1,
-   "placeholder": "0.00",
-   "precision": "2"
-  },
-  {
    "fieldname": "basic_details_section",
    "fieldtype": "Section Break",
    "label": "Basic Details"
@@ -148,11 +116,6 @@
   {
    "fieldname": "timings_section",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_xgpa",
-   "fieldtype": "Column Break",
-   "label": "Closure Details"
   },
   {
    "fieldname": "initial_details_column",
@@ -187,16 +150,6 @@
    "label": "Recurrence Details"
   },
   {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Work Item",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
-  {
    "depends_on": "eval: doc.recurrence_type == 'Yearly'",
    "fieldname": "recurrence_month",
    "fieldtype": "Table MultiSelect",
@@ -220,21 +173,10 @@
    "options": "Recurrence Date"
   },
   {
-   "fieldname": "start_time",
-   "fieldtype": "Datetime",
-   "label": "Start Time",
-   "read_only": 1
-  },
-  {
    "fieldname": "internal_section_section",
    "fieldtype": "Section Break",
    "hidden": 1,
    "label": "Internal Section"
-  },
-  {
-   "fieldname": "planned_end",
-   "fieldtype": "Datetime",
-   "label": "Planned End"
   },
   {
    "fieldname": "twenty_percent_reminder_time",
@@ -274,12 +216,57 @@
    "fieldtype": "Table",
    "label": "Recurrence Day Occurrence",
    "options": "Recurrence Day Occurrence"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference DocType",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference_document",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Document",
+   "options": "reference_doctype"
+  },
+  {
+   "fieldname": "report_to",
+   "fieldtype": "Link",
+   "label": "Report To",
+   "options": "User"
+  },
+  {
+   "default": "0",
+   "fieldname": "rework_count",
+   "fieldtype": "Int",
+   "label": "Rework Count",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "activities",
+   "fieldtype": "Table",
+   "label": "Activities",
+   "options": "Work Item Log"
+  },
+  {
+   "fieldname": "actual_duration",
+   "fieldtype": "Float",
+   "label": "Actual Duration (In Hours)",
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "first_mail",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "First mail"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-08-08 13:55:40.927379",
+ "modified": "2026-01-20 10:30:48.552297",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

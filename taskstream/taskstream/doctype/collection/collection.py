@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class WorkItemConfiguration(Document):
+class Collection(Document):
 	pass

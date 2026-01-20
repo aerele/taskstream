@@ -10,14 +10,94 @@ frappe.ui.form.on('Work Item', {
 	},
 
 	refresh: function (frm) {
+		const user = frappe.session.user;
+		// Mark Complete button
+		if ((frm.doc.status === 'In Progress' && !frm.doc.is_critical) || (frm.doc.status === 'Under Review' && user === frm.doc.reviewer)) {
+			frm.add_custom_button(__('Mark Complete'), function () {
+				frappe.call({
+					method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
+					args: { docname: frm.doc.name },
+					callback: function (r) {
+						if (!r.exc) {
+							frappe.msgprint(__('Marked as Done!'));
+							frm.reload_doc();
+						}
+					}
+				});
+			});
+		}
+		// Send Notification button
+		if (!frm.doc.first_mail && !frm.is_dirty()) {
+			frm.add_custom_button(__('Sent Mail'), function () {
+				frappe.call({
+					method: 'taskstream.taskstream.doctype.work_item.work_item.sent_noti',
+					args: { work_item: frm.doc.name },
+					callback: function (r) {
+						if (!r.exc) {
+							frappe.msgprint(__('Mail Sent!'));
+							frm.reload_doc();
+						}
+					}
+				});
+			});
+		}
+		// Rework button
+		if (frm.doc.status === 'Under Review' && frm.doc.reviewer === user) {
+			frm.add_custom_button(__('Rework'), function () {
+				let d = new frappe.ui.Dialog({
+					title: 'Rework Work Item',
+					fields: [
+						{
+							label: 'Rework Comments',
+							fieldname: 'rework_comments',
+							fieldtype: 'Small Text',
+							reqd: 1
+						},
+						{
+							label: 'Planned Start Date',
+							fieldname: 'planned_start_date',
+							fieldtype: 'Datetime',
+							reqd: 1
+						},
+						{
+							label: 'Planned End Date',
+							fieldname: 'planned_end_date',
+							fieldtype: 'Datetime',
+							reqd: 1
+						}
+					],
+					primary_action_label: 'Submit',
+					primary_action(values) {
+						frappe.call({
+							method: 'taskstream.taskstream.doctype.work_item.work_item.resend_for_rework',
+							args: {
+								docname: frm.doc.name,
+								rework_comments: values.rework_comments,
+								planned_start_date: values.planned_start_date,
+								planned_end_date: values.planned_end_date
+							},
+							callback: function (r) {
+								if (!r.exc) {
+									frappe.msgprint(__('Work Item sent for rework!'));
+									frm.reload_doc();
+									d.hide();
+								}
+							}
+						});
+					}
+				});
+				d.show();
+			});
+		}
+		// Set requested_by on new document
 		if (frm.is_new() && !frm.doc.requested_by) {
 			frm.set_value('requested_by', frappe.session.user);
 		}
 
-		frm.clear_custom_buttons();
+		// frm.clear_custom_buttons();
 
-		const user = frappe.session.user;
-
+		// const user = frappe.session.user;
+		// Start Now button
 		if (!frm.is_new() && frm.doc.status === 'To Do' && frm.doc.assignee === user) {
 			frm.add_custom_button(__('Start Now'), function () {
 				frappe.call({
@@ -32,20 +112,20 @@ frappe.ui.form.on('Work Item', {
 				});
 			});
 		}
-		if (!frm.is_new() && frm.doc.status === 'Rework Needed' && frm.doc.assignee === user) {
-			frm.add_custom_button(__('Start Rework'), function () {
-				frappe.call({
-					method: 'taskstream.taskstream.doctype.work_item.work_item.start_now',
-					args: { docname: frm.doc.name },
-					callback: function (r) {
-						if (!r.exc) {
-							frappe.msgprint(__('Work Item re-started!'));
-							frm.reload_doc();
-						}
-					}
-				});
-			});
-		}
+		// if (!frm.is_new() && frm.doc.status === 'Rework Needed' && frm.doc.assignee === user) {
+		// 	frm.add_custom_button(__('Start Rework'), function () {
+		// 		frappe.call({
+		// 			method: 'taskstream.taskstream.doctype.work_item.work_item.start_now',
+		// 			args: { docname: frm.doc.name },
+		// 			callback: function (r) {
+		// 				if (!r.exc) {
+		// 					frappe.msgprint(__('Work Item re-started!'));
+		// 					frm.reload_doc();
+		// 				}
+		// 			}
+		// 		});
+		// 	});
+		// }
 		if (!frm.is_new() && ['In Progress', 'Under Review'].includes(frm.doc.status)) {
 			const isCritical = frm.doc.is_critical;
 
@@ -65,54 +145,55 @@ frappe.ui.form.on('Work Item', {
 					});
 				}
 
-				if (user === frm.doc.reviewer && frm.doc.status == 'Under Review') {
-					frm.add_custom_button(__('Resend for rework'), function () {
-						frappe.call({
-							method: 'taskstream.taskstream.doctype.work_item.work_item.resend_for_rework',
-							args: { docname: frm.doc.name },
-							callback: function (r) {
-								if (!r.exc) {
-									frappe.msgprint(__('Work Item has been sent for rework!'));
-									frm.reload_doc();
-								}
-							}
-						});
-					});
+				// if (user === frm.doc.reviewer && frm.doc.status == 'Under Review') {
+					// frm.add_custom_button(__('Resend for rework'), function () {
+					// 	frappe.call({
+					// 		method: 'taskstream.taskstream.doctype.work_item.work_item.resend_for_rework',
+					// 		args: { docname: frm.doc.name },
+					// 		callback: function (r) {
+					// 			if (!r.exc) {
+					// 				frappe.msgprint(__('Work Item has been sent for rework!'));
+					// 				frm.reload_doc();
+					// 			}
+					// 		}
+					// 	});
+					// });
 
-					frm.add_custom_button(__('Mark Complete'), function () {
-						frappe.call({
-							method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
-							args: { docname: frm.doc.name },
-							callback: function (r) {
-								if (!r.exc) {
-									frappe.msgprint(__('Marked as Done!'));
-									frm.reload_doc();
-								}
-							}
-						});
-					});
-				}
+					// frm.add_custom_button(__('Mark Complete'), function () {
+					// 	frappe.call({
+					// 		method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
+					// 		args: { docname: frm.doc.name },
+					// 		callback: function (r) {
+					// 			if (!r.exc) {
+					// 				frappe.msgprint(__('Marked as Done!'));
+					// 				frm.reload_doc();
+					// 			}
+					// 		}
+					// 	});
+					// });
+				// }
 
-			} else {
-				if (user === frm.doc.assignee) {
-					frm.add_custom_button(__('Mark Complete'), function () {
-						frappe.call({
-							method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
-							args: { docname: frm.doc.name },
-							callback: function (r) {
-								if (!r.exc) {
-									frappe.msgprint(__('Marked as Done!'));
-									frm.reload_doc();
-								}
-							}
-						});
-					});
-				}
-			}
+			} 
+			// else {
+			// 	if (user === frm.doc.assignee) {
+			// 		frm.add_custom_button(__('Mark Complete'), function () {
+			// 			frappe.call({
+			// 				method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
+			// 				args: { docname: frm.doc.name },
+			// 				callback: function (r) {
+			// 					if (!r.exc) {
+			// 						frappe.msgprint(__('Marked as Done!'));
+			// 						frm.reload_doc();
+			// 					}
+			// 				}
+			// 			});
+			// 		});
+			// 	}
+			// }
 		}
 
-		const isDone = frm.doc.status === 'Done';
-		frm.set_df_property('actual_duration', 'read_only', isDone);
+		// const isDone = frm.doc.status === 'Done';
+		// frm.set_df_property('actual_duration', 'read_only', isDone);
 	},
 
 	validate: function (frm) {
@@ -128,7 +209,7 @@ frappe.ui.form.on('Work Item', {
 
 	reviewer: function (frm) {
 		if (frm.doc.reviewer == frm.doc.assignee) {
-			frappe.throw("Reviwer cannot be same as the Assignee")
+			frappe.throw("Reviewer cannot be same as the Assignee")
 		}
 	},
 

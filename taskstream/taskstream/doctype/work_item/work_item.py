@@ -8,22 +8,21 @@ from frappe.utils import now_datetime, get_datetime
 
 class WorkItem(Document):
 	def validate(self):
-		self.update_revision_count()
+		
+		planned_start_exists = any(row.action_type == "Planned Start Time" for row in self.activities)
+		planned_end_exists = any(row.action_type == "Planned End Time" for row in self.activities)
+		if not planned_start_exists or not planned_end_exists:
+			frappe.throw("Activities must include at least one 'Planned Start Time' and one 'Planned End Time' entry.")
+		
 		self.validate_reviewer()
 		self.validate_recurrence_date()
 		self.validate_recurrence_time()
 
-		if self.status == "In Progress" and self.start_time and self.estimated_duration:
+		if self.status == "In Progress":
 			calculate_planned_target(self)
 		
 		if self.status == "Done":
 			calculate_score(self)
-
-	def update_revision_count(self):
-		if self.name and not self.is_new():
-			old_duration = frappe.db.get_value("Work Item", self.name, "estimated_duration")
-			if old_duration != self.estimated_duration:
-				self.revision_count = self.revision_count + 1
 	
 	def validate_reviewer(self):
 		if self.reviewer == self.assignee:
@@ -53,6 +52,32 @@ class WorkItem(Document):
 				frappe.throw("Each recurrence time must be unique!")
 			seen.add(val)
 
+	def before_save(self):
+		old_doc = self.get_doc_before_save()
+		if not old_doc:
+			return
+
+		key_field_changed = any(
+			self.has_value_changed(field)
+			for field in [
+				"reviewer",
+				"report_to",
+				"summary",
+				"description",
+				"assignee",
+				"is_critical"
+			]
+		)
+
+		if not (key_field_changed):
+			return
+
+		if key_field_changed and self.owner != frappe.session.user:
+			frappe.throw("Only the owner can modify key details of this Work Item.")
+
+		if self.first_mail:
+			sent_noti(self.name)
+
 @frappe.whitelist()
 def send_for_review(docname):
 	doc = frappe.get_doc("Work Item", docname)
@@ -75,6 +100,10 @@ def mark_complete(docname):
 	doc = frappe.get_doc("Work Item", docname)
 
 	doc.status = "Done"
+	doc.append("activities", {
+		"action_type": "Actual End Time",
+		"time": now_datetime().replace(second=0, microsecond=0)
+	})
 	doc.save(ignore_permissions=True)
 
 @frappe.whitelist()
@@ -86,77 +115,44 @@ def start_now(docname):
 	doc.save(ignore_permissions=True)
 
 @frappe.whitelist()
-def resend_for_rework(docname):
+def resend_for_rework(docname, rework_comments, planned_start_date, planned_end_date):
 	doc = frappe.get_doc("Work Item", docname)
 
-	doc.status = "Rework Needed"
+	doc.status = "To Do"
+	doc.rework_count += 1
+	doc.append("activities", {
+		"action_type": "Planned Start Time",
+		"time": get_datetime(planned_start_date).replace(second=0, microsecond=0),
+	})
+	doc.append("activities", {
+		"action_type": "Planned End Time",
+		"time": get_datetime(planned_end_date).replace(second=0, microsecond=0),
+	})
 	doc.save(ignore_permissions=True)
+	doc.add_comment("Comment", rework_comments)
 
 def calculate_planned_target(doc):
-	planned_start = get_datetime(doc.start_time)
-	duration_hours = float(doc.estimated_duration or 0)
-	if not planned_start or not duration_hours:
-		return
+	planned_start_time = None
+	planned_end_time = None
+	
+	for row in doc.activities:
+		if row.action_type == "Planned Start Time":
+			if planned_start_time is None or row.time > planned_start_time:
+				planned_start_time = row.time
+		if row.action_type == "Planned End Time":
+			if planned_end_time is None or row.time > planned_end_time:
+				planned_end_time = row.time
+		
+	sent_alert_on = frappe.get_single_value("Work Item Configuration", "sent_reminder_before")
+	if planned_start_time and planned_end_time:
+		planned_end_time = get_datetime(planned_end_time)
 
-	employee = frappe.db.get_value("Employee", {"user_id": doc.assignee}, ["name", "default_shift"], as_dict=True)
-	shift_name = employee.default_shift if employee and employee.default_shift else "1st shift"
-
-	shift = frappe.get_doc("Shift Type", shift_name)
-	config = frappe.get_doc("Work Item Configuration", {"shift": shift_name})
-
-	shift_start = ensure_time(shift.start_time)
-	shift_end = ensure_time(shift.end_time)
-	lunch_start = ensure_time(config.lunch_start_time)
-	lunch_end = ensure_time(config.lunch_end_time)
-
-	current_dt = planned_start
-	remaining_hours = duration_hours
-
-	while remaining_hours > 0:
-		current_day = current_dt.date()
-		shift_start_dt = datetime.combine(current_day, shift_start)
-		shift_end_dt = datetime.combine(current_day, shift_end)
-
-		if current_dt < shift_start_dt:
-			current_dt = shift_start_dt
-
-		if current_dt >= shift_end_dt:
-			current_dt = datetime.combine(current_day + timedelta(days=1), shift_start)
-			continue
-
-		available_start = current_dt
-		available_end = min(shift_end_dt, datetime.combine(current_day, lunch_start))
-		available_hours_before_lunch = max(0, (available_end - available_start).total_seconds() / 3600)
-
-		if available_hours_before_lunch > 0:
-			used = min(remaining_hours, available_hours_before_lunch)
-			remaining_hours -= used
-			current_dt += timedelta(hours=used)
-			if remaining_hours <= 0:
-				break
-
-		lunch_start_dt = datetime.combine(current_day, lunch_start)
-		lunch_end_dt = datetime.combine(current_day, lunch_end)
-		if lunch_start_dt <= current_dt < lunch_end_dt:
-			current_dt = lunch_end_dt
-
-		available_end = shift_end_dt
-		available_hours_after_lunch = max(0, (available_end - current_dt).total_seconds() / 3600)
-		if available_hours_after_lunch > 0:
-			used = min(remaining_hours, available_hours_after_lunch)
-			remaining_hours -= used
-			current_dt += timedelta(hours=used)
-			if remaining_hours <= 0:
-				break
-
-		current_dt = datetime.combine(current_day + timedelta(days=1), shift_start)
-
-	doc.planned_end = current_dt.replace(second=0, microsecond=0)
-
-	reminder_delta = timedelta(seconds=duration_hours * 3600 * 0.20)
-	doc.twenty_percent_reminder_time = current_dt - reminder_delta
-	doc.twenty_percent_reminder_time = doc.twenty_percent_reminder_time.replace(second=0, microsecond=0)
-	doc.twenty_percent_reminder_sent = 0
+		hr, mm, sec = map(int, sent_alert_on.split(':'))
+		total_minutes = hr * 60 + mm
+		reminder_delta = timedelta(minutes=total_minutes)
+		doc.twenty_percent_reminder_time = planned_end_time - reminder_delta
+		doc.twenty_percent_reminder_time = doc.twenty_percent_reminder_time.replace(second=0, microsecond=0)
+		doc.twenty_percent_reminder_sent = 0
 
 def ensure_time(value):
 	if isinstance(value, timedelta):
@@ -210,23 +206,56 @@ def send_deadline_reminders():
 			frappe.log_error("Deadline Reminder Error", f"User {item.assignee} has no valid email.")
 
 def calculate_score(doc):
-	if doc.status == "Done":
-		doc.score = 60
+	if doc.status != "Done":
+		return
+	
+	planned_end_time = None
+	actual_end_time = None
+	for row in doc.activities:
+		if row.action_type == "Planned End Time":
+			if planned_end_time is None or row.time > planned_end_time:
+				planned_end_time = row.time
+		elif row.action_type == "Actual End Time":
+			if actual_end_time is None or row.time > actual_end_time:
+				actual_end_time = row.time
+	
+	planned_end_time = get_datetime(planned_end_time)
+	actual_end_time = get_datetime(actual_end_time)
 
-		if doc.estimated_duration and doc.actual_duration:
-			estimated = doc.estimated_duration
-			actual = doc.actual_duration
-			if actual > estimated:
-				return
-			revisions = doc.revision_count or 0
+	if not (planned_end_time and actual_end_time):
+		return
+	
+	if actual_end_time <= planned_end_time:
+		doc.score = 0
+		return
+	
+	config = frappe.get_single("Work Item Configuration")
+	total_delay_minutes = (actual_end_time - planned_end_time).total_seconds() / 60
+	if total_delay_minutes < 1440:
+		penalty = total_delay_minutes * config.penalty_per_minute
+	else:
+		penalty = ((total_delay_minutes // 1440) * config.penalty_points_per_day) + (( total_delay_minutes % 1440) * config.penalty_per_minute)
+	max_points = config.max_delay_penalty if doc.rework_count == 0 else config.max_rework_penalty
+	doc.score = -min(penalty, max_points)
 
-			if actual == 0:
-				extra_time_ratio = 0
-			else:
-				extra_time_ratio = max((estimated - actual) / actual, 0)
-
-			penalty_percent = revisions * extra_time_ratio
-			on_time_score = 40 - (penalty_percent * 40)
-			on_time_score = max(min(on_time_score, 40), 0)
-
-			doc.score += round(on_time_score, 2)
+@frappe.whitelist()
+def sent_noti(work_item):
+	from taskstream.taskstream import send_notifications
+	doc = frappe.get_doc("Work Item", work_item)
+	to = []
+	if not doc.first_mail:
+		if doc.assignee:
+			to.append(doc.assignee)
+		content = f"A work item <b>{doc.name}</b> has been created and assigned to you.<br><a href='{frappe.utils.get_url()}/app/work-item/{doc.name}'>View Work Item</a>"
+		send_notifications(doc.name, content, to)
+		doc.first_mail = 1
+		doc.save(ignore_permissions=True)
+	else:
+		if doc.reviewer:
+			to.append(doc.reviewer)
+		if doc.assignee:
+			to.append(doc.assignee)
+		if doc.report_to:
+			to.append(doc.report_to)
+		content = f"A work item <b>{doc.name}</b> has been updated.<br><a href='{frappe.utils.get_url()}/app/work-item/{doc.name}'>View Work Item</a>"
+		send_notifications(doc.name, content, to)
