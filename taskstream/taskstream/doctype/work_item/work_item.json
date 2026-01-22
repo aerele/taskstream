@@ -102,7 +102,8 @@
    "fieldname": "score",
    "fieldtype": "Float",
    "label": "Score",
-   "precision": "2"
+   "precision": "2",
+   "read_only": 1
   },
   {
    "fieldname": "basic_details_section",

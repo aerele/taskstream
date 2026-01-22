@@ -5,6 +5,7 @@ import frappe
 from frappe.model.document import Document
 from datetime import timedelta, datetime, time
 from frappe.utils import now_datetime, get_datetime
+from taskstream.taskstream import send_notifications
 
 class WorkItem(Document):
 	def validate(self):
@@ -16,7 +17,8 @@ class WorkItem(Document):
 		
 		self.validate_reviewer()
 		self.validate_recurrence_date()
-		self.validate_recurrence_time()
+		if self.recurrence_type != "One Time" and (self.monthly_recurrence_based_on != None and self.monthly_recurrence_based_on == "Date"):
+			self.validate_recurrence_time()
 
 		if self.status == "In Progress":
 			calculate_planned_target(self)
@@ -79,21 +81,10 @@ class WorkItem(Document):
 			sent_noti(self.name)
 
 @frappe.whitelist()
-def send_for_review(docname):
-	doc = frappe.get_doc("Work Item", docname)
-	
-	reviewer_email = frappe.db.get_value("User", doc.reviewer, "email")
-	if not reviewer_email:
-		frappe.throw("Reviewer does not have a valid email.")
-
-	frappe.sendmail(
-		recipients=[reviewer_email],
-		subject=f"Review Requested for Work Item: {doc.name}",
-		message=f"A critical work item has been submitted for your review.<br><br><b>Name:</b> {doc.name}<br><b>Assignee:</b> {doc.assignee}<br><br><a href='{frappe.utils.get_url()}/app/work-item/{doc.name}'>View Work Item</a>"
-	)
-
-	doc.status = "Under Review"
-	doc.save(ignore_permissions=True)
+def send_for_review(docname, reviewer):
+	frappe.db.set_value("Work Item", docname, "status", "Under Review")
+	content = f"A work item <b>{docname}</b> has been sent for review.<br><a href='{frappe.utils.get_url()}/app/work-item/{docname}'>View Work Item</a>"
+	send_notifications(docname, content, to = [reviewer])
 
 @frappe.whitelist()
 def mark_complete(docname):
@@ -108,11 +99,7 @@ def mark_complete(docname):
 
 @frappe.whitelist()
 def start_now(docname):
-	doc = frappe.get_doc("Work Item", docname)
-
-	doc.status = "In Progress"
-	doc.start_time = now_datetime()
-	doc.save(ignore_permissions=True)
+	frappe.db.set_value("Work Item", docname, "status", "In Progress")
 
 @frappe.whitelist()
 def resend_for_rework(docname, rework_comments, planned_start_date, planned_end_date):
@@ -130,6 +117,8 @@ def resend_for_rework(docname, rework_comments, planned_start_date, planned_end_
 	})
 	doc.save(ignore_permissions=True)
 	doc.add_comment("Comment", rework_comments)
+	content = f"A work item <b>{docname}</b> has been sent for Rework - {rework_comments}.<br><a href='{frappe.utils.get_url()}/app/work-item/{docname}'>View Work Item</a>"
+	send_notifications(docname, content, to = [doc.assignee])
 
 def calculate_planned_target(doc):
 	planned_start_time = None
@@ -163,47 +152,47 @@ def ensure_time(value):
 		return time(hour=hours, minute=minutes, second=seconds)
 	return value
 
-def send_twenty_percent_reminders():
-	now = now_datetime().replace(second=0, microsecond=0)
-	items = frappe.get_all("Work Item", filters={
-		"status": "In Progress",
-		"twenty_percent_reminder_sent": 0,
-		"twenty_percent_reminder_time": ("=", now)
-	}, fields=["name", "assignee"])
+# def send_twenty_percent_reminders():
+# 	now = now_datetime().replace(second=0, microsecond=0)
+# 	items = frappe.get_all("Work Item", filters={
+# 		"status": "In Progress",
+# 		"twenty_percent_reminder_sent": 0,
+# 		"twenty_percent_reminder_time": ("=", now)
+# 	}, fields=["name", "assignee"])
 
-	for item in items:
-		user_email = frappe.db.get_value("User", item.assignee, "email")
-		if user_email:
-			frappe.sendmail(
-				recipients=[user_email],
-				subject=f"Reminder: Work Item {item.name} nearing deadline",
-				message=f"You're at 20% remaining time for the Work Item <b>{item.name}</b>. Please plan accordingly.<br><a href='{frappe.utils.get_url()}/app/work-item/{item.name}'>View Work Item</a>",
-				now=True
-			)
-			frappe.db.set_value("Work Item", item.name, "twenty_percent_reminder_sent", 1)
-		else:
-			frappe.log_error("Work Item Reminder Error", f"User {item.assignee} does not have a valid email.")
+# 	for item in items:
+# 		user_email = frappe.db.get_value("User", item.assignee, "email")
+# 		if user_email:
+# 			frappe.sendmail(
+# 				recipients=[user_email],
+# 				subject=f"Reminder: Work Item {item.name} nearing deadline",
+# 				message=f"You're at 20% remaining time for the Work Item <b>{item.name}</b>. Please plan accordingly.<br><a href='{frappe.utils.get_url()}/app/work-item/{item.name}'>View Work Item</a>",
+# 				now=True
+# 			)
+# 			frappe.db.set_value("Work Item", item.name, "twenty_percent_reminder_sent", 1)
+# 		else:
+# 			frappe.log_error("Work Item Reminder Error", f"User {item.assignee} does not have a valid email.")
 
-def send_deadline_reminders():
-	now = now_datetime().replace(second=0, microsecond=0)
-	items = frappe.get_all("Work Item", filters={
-		"status": "In Progress",
-		"deadline_reminder_sent": 0,
-		"planned_end": ("=", now)
-	}, fields=["name", "assignee"])
+# def send_deadline_reminders():
+# 	now = now_datetime().replace(second=0, microsecond=0)
+# 	items = frappe.get_all("Work Item", filters={
+# 		"status": "In Progress",
+# 		"deadline_reminder_sent": 0,
+# 		"planned_end": ("=", now)
+# 	}, fields=["name", "assignee"])
 
-	for item in items:
-		user_email = frappe.db.get_value("User", item.assignee, "email")
-		if user_email:
-			frappe.sendmail(
-				recipients=[user_email],
-				subject=f"Work Item {item.name} Deadline Reached",
-				message=f"The deadline is met for the Work Item <b>{item.name}</b>, but it's still marked as <i>In Progress</i>. Please review it.<br><a href='{frappe.utils.get_url()}/app/work-item/{item.name}'>View Work Item</a>",
-				now=True
-			)
-			frappe.db.set_value("Work Item", item.name, "deadline_reminder_sent", 1)
-		else:
-			frappe.log_error("Deadline Reminder Error", f"User {item.assignee} has no valid email.")
+# 	for item in items:
+# 		user_email = frappe.db.get_value("User", item.assignee, "email")
+# 		if user_email:
+# 			frappe.sendmail(
+# 				recipients=[user_email],
+# 				subject=f"Work Item {item.name} Deadline Reached",
+# 				message=f"The deadline is met for the Work Item <b>{item.name}</b>, but it's still marked as <i>In Progress</i>. Please review it.<br><a href='{frappe.utils.get_url()}/app/work-item/{item.name}'>View Work Item</a>",
+# 				now=True
+# 			)
+# 			frappe.db.set_value("Work Item", item.name, "deadline_reminder_sent", 1)
+# 		else:
+# 			frappe.log_error("Deadline Reminder Error", f"User {item.assignee} has no valid email.")
 
 def calculate_score(doc):
 	if doc.status != "Done":
@@ -240,7 +229,6 @@ def calculate_score(doc):
 
 @frappe.whitelist()
 def sent_noti(work_item):
-	from taskstream.taskstream import send_notifications
 	doc = frappe.get_doc("Work Item", work_item)
 	to = []
 	if not doc.first_mail:

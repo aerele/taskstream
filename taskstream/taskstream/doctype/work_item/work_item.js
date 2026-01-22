@@ -134,7 +134,10 @@ frappe.ui.form.on('Work Item', {
 					frm.add_custom_button(__('Send for Review'), function () {
 						frappe.call({
 							method: 'taskstream.taskstream.doctype.work_item.work_item.send_for_review',
-							args: { docname: frm.doc.name },
+							args: { 
+								docname: frm.doc.name,
+								reviewer: frm.doc.reviewer
+							 },
 							callback: function (r) {
 								if (!r.exc) {
 									frappe.msgprint(__('Sent for review!'));
