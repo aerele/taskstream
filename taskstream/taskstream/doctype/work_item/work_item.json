@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_auto_repeat": 1,
  "allow_rename": 1,
  "autoname": "WI-.####",
  "creation": "2025-06-26 17:45:14.163828",
@@ -46,6 +47,7 @@
   {
    "fieldname": "requested_by",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Requested By",
    "options": "User",
    "read_only": 1
@@ -54,6 +56,7 @@
    "fieldname": "assignee",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Assign To",
    "options": "User",
    "reqd": 1
@@ -267,7 +270,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-20 10:30:48.552297",
+ "modified": "2026-01-28 19:11:00.456067",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

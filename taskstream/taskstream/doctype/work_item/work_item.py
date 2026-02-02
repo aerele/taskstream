@@ -4,15 +4,14 @@
 import frappe
 from frappe.model.document import Document
 from datetime import timedelta, datetime, time
-from frappe.utils import now_datetime, get_datetime
+from frappe.utils import now_datetime, get_datetime, get_timedelta
 from taskstream.taskstream import send_notifications
 
 class WorkItem(Document):
 	def validate(self):
 		
-		planned_start_exists = any(row.action_type == "Planned Start Time" for row in self.activities)
 		planned_end_exists = any(row.action_type == "Planned End Time" for row in self.activities)
-		if not planned_start_exists or not planned_end_exists:
+		if not planned_end_exists:
 			frappe.throw("Activities must include at least one 'Planned Start Time' and one 'Planned End Time' entry.")
 		
 		self.validate_reviewer()
@@ -79,6 +78,210 @@ class WorkItem(Document):
 
 		if self.first_mail:
 			sent_noti(self.name)
+		
+	def after_insert(self):
+		if self.recurrence_type == "One Time":
+			return
+		creation_limit = frappe.get_single_value("Work Item Configuration", "recurrence_creation_limit")
+
+		start_date = now_datetime().date()
+		end_date = datetime.strptime(self.repeat_until, "%Y-%m-%d").date()
+		max_creation_date = start_date + timedelta(days=creation_limit)
+		end_date = min(end_date, max_creation_date)
+		from frappe.utils.dateutils import get_dates_from_timegrain
+		values = _get_valid_dates(self, start_date, end_date)
+		
+		for value in values:
+			create_work_item_recurrences(self, value[0], value[1])
+
+		frappe.db.commit()
+
+def _get_valid_dates(self, start_date=None, end_date=None):
+	if start_date is None:
+		start_date = now_datetime().date()
+	if end_date is None:
+		if hasattr(self, 'repeat_until') and self.repeat_until:
+			end_date = datetime.strptime(self.repeat_until, "%Y-%m-%d").date()
+		else:
+			end_date = start_date + timedelta(days=365)
+	
+	def _parse_recurrence_time(recurrence_time):
+		try:
+			if isinstance(recurrence_time, timedelta):
+				return recurrence_time
+			hours = int(recurrence_time)
+			return timedelta(hours=hours)
+		except (ValueError, TypeError):
+			return timedelta(hours=0)
+	
+	valid_dates = []
+	
+	if self.recurrence_type == "Daily":
+		current_date = start_date
+		while current_date <= end_date:
+			for row in self.recurrence_time:
+				recurrence_time = row.recurrence_time
+				if isinstance(recurrence_time, int):
+					time_obj = timedelta(hours=int(recurrence_time))
+				else:
+					time_obj = recurrence_time
+				valid_dates.append((current_date, time_obj))
+				# time_delta = _parse_recurrence_time(row.recurrence_time)
+				# valid_dates.append((current_date, time_delta))
+			current_date += timedelta(days=1)
+	
+	elif self.recurrence_type == "Weekly":
+		days_map = {
+			"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
+			"Friday": 4, "Saturday": 5, "Sunday": 6
+		}
+		
+		target_days = [days_map[d.weekday] for d in self.recurrence_day if d.weekday in days_map]
+		frequency = int(self.recurrence_frequency or 1)
+		
+		current_date = start_date
+		while current_date <= end_date:
+			if current_date.weekday() in target_days:
+				weeks_diff = (current_date - start_date).days // 7
+				if weeks_diff % frequency == 0:
+					for row in self.recurrence_time:
+						recurrence_time = row.recurrence_time
+						if isinstance(recurrence_time, int):
+							time_obj = timedelta(hours=int(recurrence_time))
+						else:
+							time_obj = recurrence_time
+						valid_dates.append((current_date, time_obj))
+						# time_delta = _parse_recurrence_time(row.recurrence_time)
+						# valid_dates.append((current_date, time_delta))
+			current_date += timedelta(days=1)
+	
+	elif self.recurrence_type == "Monthly":
+		import datetime as dt
+		import calendar
+		
+		today = dt.date.today()
+		valid_dates = []
+
+		current_month = today.month
+		current_year = today.year
+
+		while dt.date(current_year, current_month, 1) <= end_date:
+			
+			for row in self.recurrence_date:
+				d = row.recurrence_date
+				
+				last_day = calendar.monthrange(current_year, current_month)[1]
+				actual_day = min(d, last_day)
+				
+				generated_date = dt.date(current_year, current_month, actual_day)
+
+				if today < generated_date <= end_date:
+					for time in self.recurrence_time:
+						time_delta = _parse_recurrence_time(time.recurrence_time)
+						valid_dates.append((generated_date, time_delta))
+
+			current_month += 1
+			if current_month > 12:
+				current_month = 1
+				current_year += 1
+
+	elif self.recurrence_type == "Yearly":
+		frequency = int(self.recurrence_frequency or 1)
+		start_year_base = start_date.year
+		
+		current_year = start_year_base
+		while current_year <= end_date.year:
+			years_diff = current_year - start_year_base
+			if years_diff % frequency == 0:
+				# Get the months for this year
+				months_to_check = []
+				if hasattr(self, 'recurrence_month') and self.recurrence_month:
+					for month_row in self.recurrence_month:
+						months_to_check.append(month_row.month)
+				
+				month_map = {
+					"January": 1, "February": 2, "March": 3, "April": 4,
+					"May": 5, "June": 6, "July": 7, "August": 8,
+					"September": 9, "October": 10, "November": 11, "December": 12
+				}
+				
+				for month_name in months_to_check:
+					month_num = month_map.get(month_name, 1)
+					
+					# Get the target weekday and date
+					target_weekday_names = [d.weekday for d in self.recurrence_day if d.weekday]
+					
+					for weekday_name in target_weekday_names:
+						days_map = {
+							"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
+							"Friday": 4, "Saturday": 5, "Sunday": 6
+						}
+						
+						if weekday_name not in days_map:
+							continue
+						
+						target_weekday = days_map[weekday_name]
+						target_date = _get_nth_weekday(current_year, month_num, target_weekday, 1)
+						
+						if target_date and start_date <= target_date <= end_date:
+							for time_row in self.recurrence_time:
+								time_delta = _parse_recurrence_time(time_row.recurrence_time)
+								valid_dates.append((target_date, time_delta))
+			
+			current_year += 1
+	
+	return valid_dates
+
+
+def _get_nth_weekday(year, month, weekday, occurrence):
+	from datetime import datetime
+	
+	first_day = datetime(year, month, 1)
+	
+	days_until_target = (weekday - first_day.weekday()) % 7
+	first_occurrence = first_day + timedelta(days=days_until_target)
+	
+	if occurrence <= 4:
+		target_date = first_occurrence + timedelta(weeks=occurrence - 1)
+	else:
+		target_date = first_occurrence + timedelta(weeks=3)
+		if (target_date + timedelta(weeks=1)).month == month:
+			target_date += timedelta(weeks=1)
+	
+	# Make sure the date is in the correct month
+	if target_date.month != month:
+		return None
+	
+	return target_date.date()
+
+
+def create_work_item_recurrences(wi_doc, date, recurrence_time):
+	new_wi = frappe.copy_doc(wi_doc)
+	new_wi.name = None
+	new_wi.recurrence_type = "One Time"
+	new_wi.recurrence_date = []
+	new_wi.recurrence_time = []
+	new_wi.activities = []
+	
+	if isinstance(recurrence_time, timedelta):
+		time_delta = recurrence_time
+	else:
+		try:
+			time_delta = timedelta(hours=int(recurrence_time))
+		except (ValueError, TypeError):
+			time_delta = timedelta(hours=0)
+	
+	new_wi.append("activities", {
+		"action_type": "Planned End Time",
+		"time": datetime.combine(date, datetime.min.time()) + time_delta,
+	})
+	new_wi.status = "To Do"
+	new_wi.reference_doctype = "Work Item"
+	new_wi.reference_document = wi_doc.name
+	new_wi.owner = wi_doc.owner
+	new_wi.save(ignore_permissions=True)
+	return new_wi
+
 
 @frappe.whitelist()
 def send_for_review(docname, reviewer):
