@@ -15,7 +15,9 @@
   "status",
   "first_mail",
   "column_break_znmq",
-  "is_critical",
+  "work_flow_template",
+  "idx",
+  "review_required",
   "reviewer",
   "description",
   "reference_doctype",
@@ -23,7 +25,6 @@
   "timings_section",
   "initial_details_column",
   "activities",
-  "actual_duration",
   "recurrence_score_details_section",
   "recurrence_details_column",
   "recurrence_type",
@@ -80,17 +81,11 @@
    "options": "One Time\nDaily\nWeekly\nMonthly\nYearly"
   },
   {
-   "default": "0",
-   "fieldname": "is_critical",
-   "fieldtype": "Check",
-   "label": "Is Critical?"
-  },
-  {
-   "depends_on": "is_critical",
+   "depends_on": "review_required",
    "fieldname": "reviewer",
    "fieldtype": "Link",
    "label": "Reviewer",
-   "mandatory_depends_on": "is_critical",
+   "mandatory_depends_on": "review_required",
    "options": "User"
   },
   {
@@ -169,11 +164,11 @@
    "options": "Recurrence Time"
   },
   {
-   "depends_on": "eval: (doc.recurrence_type == 'Monthly' && doc.monthly_recurrence_based_on == 'Date') || (doc.recurrence_type == 'Yearly')",
+   "depends_on": "eval: [\"Monthly\", \"Yearly\"].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on === \"Date\"",
    "fieldname": "recurrence_date",
    "fieldtype": "Table",
    "label": "Recurrence Date",
-   "mandatory_depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type)",
+   "mandatory_depends_on": "eval:['Monthly', 'Yearly'].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on == \"Date\"",
    "options": "Recurrence Date"
   },
   {
@@ -219,6 +214,7 @@
    "fieldname": "recurrence_day_occurrence",
    "fieldtype": "Table",
    "label": "Recurrence Day Occurrence",
+   "mandatory_depends_on": "eval:['Monthly'].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on == \"Day\"",
    "options": "Recurrence Day Occurrence"
   },
   {
@@ -254,27 +250,40 @@
    "options": "Work Item Log"
   },
   {
-   "fieldname": "actual_duration",
-   "fieldtype": "Float",
-   "label": "Actual Duration (In Hours)",
-   "precision": "2"
-  },
-  {
    "default": "0",
    "fieldname": "first_mail",
    "fieldtype": "Check",
    "hidden": 1,
    "label": "First mail"
+  },
+  {
+   "default": "0",
+   "fieldname": "review_required",
+   "fieldtype": "Check",
+   "label": "Review Required"
+  },
+  {
+   "fieldname": "work_flow_template",
+   "fieldtype": "Link",
+   "label": "Work Flow Template",
+   "link_filters": "[[\"Work Flow Template\",\"active\",\"=\",1],[\"Work Flow Template\",\"docstatus\",\"=\",\"1\"]]",
+   "options": "Work Flow Template"
+  },
+  {
+   "fieldname": "idx",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "idx"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-28 19:11:00.456067",
+ "modified": "2026-02-17 18:47:52.011862",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

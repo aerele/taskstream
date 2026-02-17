@@ -12,7 +12,7 @@ frappe.ui.form.on('Work Item', {
 	refresh: function (frm) {
 		const user = frappe.session.user;
 		// Mark Complete button
-		if ((frm.doc.status === 'In Progress' && !frm.doc.is_critical) || (frm.doc.status === 'Under Review' && user === frm.doc.reviewer)) {
+		if ((frm.doc.status === 'In Progress' && !frm.doc.review_required) || (frm.doc.status === 'Under Review' && user === frm.doc.reviewer)) {
 			frm.add_custom_button(__('Mark Complete'), function () {
 				frappe.call({
 					method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
@@ -54,14 +54,8 @@ frappe.ui.form.on('Work Item', {
 							reqd: 1
 						},
 						{
-							label: 'Planned Start Date',
-							fieldname: 'planned_start_date',
-							fieldtype: 'Datetime',
-							reqd: 1
-						},
-						{
-							label: 'Planned End Date',
-							fieldname: 'planned_end_date',
+							label: 'Target End Date',
+							fieldname: 'target_end_date',
 							fieldtype: 'Datetime',
 							reqd: 1
 						}
@@ -73,8 +67,7 @@ frappe.ui.form.on('Work Item', {
 							args: {
 								docname: frm.doc.name,
 								rework_comments: values.rework_comments,
-								planned_start_date: values.planned_start_date,
-								planned_end_date: values.planned_end_date
+								target_end_date: values.target_end_date
 							},
 							callback: function (r) {
 								if (!r.exc) {
@@ -127,7 +120,7 @@ frappe.ui.form.on('Work Item', {
 		// 	});
 		// }
 		if (!frm.is_new() && ['In Progress', 'Under Review'].includes(frm.doc.status)) {
-			const isCritical = frm.doc.is_critical;
+			const isCritical = frm.doc.review_required;
 
 			if (isCritical) {
 				if (user === frm.doc.assignee && frm.doc.status == 'In Progress') {
@@ -203,11 +196,11 @@ frappe.ui.form.on('Work Item', {
 		update_recurrence_description(frm);
 	},
 
-	is_critical: function (frm) {
-		if (frm.doc.is_critical && !frm.doc.reviewer) {
+	review_required: function (frm) {
+		if (frm.doc.review_required && !frm.doc.reviewer) {
 			frm.set_value('reviewer', frappe.session.user);
 		}
-		frm.set_df_property('reviewer', 'reqd', frm.doc.is_critical);
+		frm.set_df_property('reviewer', 'reqd', frm.doc.review_required);
 	},
 
 	reviewer: function (frm) {
@@ -219,6 +212,36 @@ frappe.ui.form.on('Work Item', {
 	assignee: function (frm) {
 		if (frm.doc.reviewer == frm.doc.assignee) {
 			frappe.throw("Assignee cannot be same as the Reviewer")
+		}
+	},
+
+	async work_flow_template(frm) {
+		const template = frm.doc.work_flow_template;
+		if (!template) return;
+
+		try {
+			const template_doc = await frappe.db.get_doc("Work Flow Template", template);
+			const first_task = (template_doc.tasks || [])[0];
+
+			await frm.set_value("summary", first_task.task_name || "");
+			await frm.set_value("description", first_task.task_description || "");
+			await frm.set_value("idx", 1);
+
+			if (first_task?.assignment_based_on === "User" && first_task.assignee) {
+				await frm.set_value("assignee", first_task.assignee);
+			}
+
+			frappe.model.clear_table(frm.doc, "activities");
+			if (first_task?.target_end_date_time) {
+				const target_end = get_target_end_datetime(first_task.target_end_date_time);
+				const row = frm.add_child("activities");
+				row.action_type = "Target End Date";
+				row.time = target_end;
+			}
+			frm.refresh_field("activities");
+		} catch (error) {
+			console.error(error);
+			frappe.msgprint(__("Unable to load selected Work Flow Template."));
 		}
 	},
 
@@ -432,4 +455,18 @@ function update_recurrence_description(frm) {
 		frm.fields_dict.recurrence_frequency.set_description("");
 		return;
 	}
+}
+function get_target_end_datetime(duration) {
+    const [hours = 0, minutes = 0, seconds = 0] = String(duration || "00:00:00")
+        .split(":")
+        .map(value => parseInt(value, 10) || 0);
+
+    let target = moment()
+        .add(hours, 'hours')
+        .add(minutes, 'minutes')
+        .add(seconds, 'seconds')
+        .seconds(0)
+        .milliseconds(0);
+
+    return target.format("YYYY-MM-DD HH:mm:ss");
 }
