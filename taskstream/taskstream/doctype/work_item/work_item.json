@@ -8,14 +8,15 @@
  "engine": "InnoDB",
  "field_order": [
   "basic_details_section",
-  "requested_by",
+  "reporter",
   "assignee",
-  "report_to",
+  "requester",
   "summary",
   "status",
   "first_mail",
   "column_break_znmq",
   "work_flow_template",
+  "start_date_time",
   "idx",
   "review_required",
   "reviewer",
@@ -46,12 +47,11 @@
  ],
  "fields": [
   {
-   "fieldname": "requested_by",
+   "fieldname": "requester",
    "fieldtype": "Link",
    "in_standard_filter": 1,
-   "label": "Requested By",
-   "options": "User",
-   "read_only": 1
+   "label": "Requester",
+   "options": "User"
   },
   {
    "fieldname": "assignee",
@@ -93,7 +93,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "To Do\nIn Progress\nUnder Review\nDone\nRework Needed",
+   "options": "To Do\nIn Progress\nUnder Review\nDone\nOn Hold\nRework Needed",
    "read_only": 1
   },
   {
@@ -230,10 +230,11 @@
    "options": "reference_doctype"
   },
   {
-   "fieldname": "report_to",
+   "fieldname": "reporter",
    "fieldtype": "Link",
-   "label": "Report To",
-   "options": "User"
+   "label": "Reporter",
+   "options": "User",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -274,12 +275,19 @@
    "fieldtype": "Int",
    "hidden": 1,
    "label": "idx"
+  },
+  {
+   "depends_on": "eval: doc.work_flow_template",
+   "fieldname": "start_date_time",
+   "fieldtype": "Datetime",
+   "label": "Start Date Time",
+   "mandatory_depends_on": "eval: doc.work_flow_template"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-17 18:47:52.011862",
+ "modified": "2026-02-20 16:24:28.080991",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

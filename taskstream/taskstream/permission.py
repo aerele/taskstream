@@ -5,8 +5,8 @@ def work_item_user_condition(user=None):
         user = frappe.session.user
 
     return (
-        "`tabWork Item`.requested_by = '{user}' OR "
+        "`tabWork Item`.requester = '{user}' OR "
         "`tabWork Item`.assignee = '{user}' OR "
         "`tabWork Item`.reviewer = '{user}' OR "
-        "`tabWork Item`.report_to = '{user}'"
+        "`tabWork Item`.reporter = '{user}'"
     ).format(user=user)

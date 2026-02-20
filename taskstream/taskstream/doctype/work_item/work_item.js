@@ -3,8 +3,8 @@
 
 frappe.ui.form.on('Work Item', {
 	onload: function (frm) {
-		if (frm.is_new() && !frm.doc.requested_by) {
-			frm.set_value('requested_by', frappe.session.user);
+		if (frm.is_new() && !frm.doc.reporter) {
+			frm.set_value('reporter', frappe.session.user);
 		}
 		update_recurrence_description(frm);
 	},
@@ -14,16 +14,19 @@ frappe.ui.form.on('Work Item', {
 		// Mark Complete button
 		if ((frm.doc.status === 'In Progress' && !frm.doc.review_required) || (frm.doc.status === 'Under Review' && user === frm.doc.reviewer)) {
 			frm.add_custom_button(__('Mark Complete'), function () {
-				frappe.call({
-					method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
-					args: { docname: frm.doc.name },
-					callback: function (r) {
-						if (!r.exc) {
-							frappe.msgprint(__('Marked as Done!'));
-							frm.reload_doc();
+				frappe.confirm(__('Are you sure you want to mark this item as complete?'),
+				function () {
+					frappe.call({
+						method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
+						args: { docname: frm.doc.name },
+						callback: function (r) {
+							if (!r.exc) {
+								frappe.msgprint(__('Marked as Done!'));
+								frm.reload_doc();
+							}
 						}
-					}
-				});
+					});
+				})	
 			});
 		}
 		// Send Notification button
@@ -82,15 +85,7 @@ frappe.ui.form.on('Work Item', {
 				d.show();
 			});
 		}
-		// Set requested_by on new document
-		if (frm.is_new() && !frm.doc.requested_by) {
-			frm.set_value('requested_by', frappe.session.user);
-		}
 
-		// frm.clear_custom_buttons();
-
-		// const user = frappe.session.user;
-		// Start Now button
 		if (!frm.is_new() && frm.doc.status === 'To Do' && frm.doc.assignee === user) {
 			frm.add_custom_button(__('Start Now'), function () {
 				frappe.call({
@@ -105,20 +100,22 @@ frappe.ui.form.on('Work Item', {
 				});
 			});
 		}
-		// if (!frm.is_new() && frm.doc.status === 'Rework Needed' && frm.doc.assignee === user) {
-		// 	frm.add_custom_button(__('Start Rework'), function () {
-		// 		frappe.call({
-		// 			method: 'taskstream.taskstream.doctype.work_item.work_item.start_now',
-		// 			args: { docname: frm.doc.name },
-		// 			callback: function (r) {
-		// 				if (!r.exc) {
-		// 					frappe.msgprint(__('Work Item re-started!'));
-		// 					frm.reload_doc();
-		// 				}
-		// 			}
-		// 		});
-		// 	});
-		// }
+		if (frm.doc.status === 'In Progress' && frm.doc.assignee === user) {
+			frm.add_custom_button(__('Hold'), function () {
+				frappe.db.set_value('Work Item', frm.doc.name, 'status', 'On Hold').then(() => {
+					frappe.msgprint(__('Work Item put on hold!'));
+					frm.reload_doc();
+				});
+			});
+		}
+		if (frm.doc.status === 'On Hold' && frm.doc.assignee === user) {
+			frm.add_custom_button(__('Resume'), function () {
+				frappe.db.set_value('Work Item', frm.doc.name, 'status', 'In Progress').then(() => {
+					frappe.msgprint(__('Work Item resumed!'));
+					frm.reload_doc();
+				});
+			});
+		}
 		if (!frm.is_new() && ['In Progress', 'Under Review'].includes(frm.doc.status)) {
 			const isCritical = frm.doc.review_required;
 
@@ -233,7 +230,7 @@ frappe.ui.form.on('Work Item', {
 
 			frappe.model.clear_table(frm.doc, "activities");
 			if (first_task?.target_end_date_time) {
-				const target_end = get_target_end_datetime(first_task.target_end_date_time);
+				const target_end = get_target_end_datetime(first_task.target_end_date_time, frm.doc.start_date_time);
 				const row = frm.add_child("activities");
 				row.action_type = "Target End Date";
 				row.time = target_end;
@@ -263,6 +260,14 @@ frappe.ui.form.on('Work Item', {
 	
 	recurrence_month(frm) {
 		update_recurrence_description(frm);
+	},
+
+	work_flow_template(frm) {
+		set_target_end_date_time(frm);
+	},
+
+	start_date_time(frm) {
+		set_target_end_date_time(frm);
 	}
 });
 
@@ -456,12 +461,12 @@ function update_recurrence_description(frm) {
 		return;
 	}
 }
-function get_target_end_datetime(duration) {
+function get_target_end_datetime(duration, base_datetime) {
     const [hours = 0, minutes = 0, seconds = 0] = String(duration || "00:00:00")
         .split(":")
         .map(value => parseInt(value, 10) || 0);
 
-    let target = moment()
+    let target = moment(base_datetime || undefined)
         .add(hours, 'hours')
         .add(minutes, 'minutes')
         .add(seconds, 'seconds')
@@ -469,4 +474,29 @@ function get_target_end_datetime(duration) {
         .milliseconds(0);
 
     return target.format("YYYY-MM-DD HH:mm:ss");
+}
+
+
+function set_target_end_date_time(frm) {
+	if (!frm.doc.start_date_time || !frm.doc.work_flow_template) return;
+	frappe.call({
+			method: 'taskstream.taskstream.doctype.work_item.work_item.update_target_end_on_start_date_change',
+			args: {
+				work_flow_template: frm.doc.work_flow_template,
+				start_date_time: frm.doc.start_date_time
+			},
+			callback: function (r) {
+				if (!r.exc && r.message) {
+					let first_activity = (frm.doc.activities || [])[0];
+
+					if (!first_activity) {
+						first_activity = frm.add_child("activities");
+						first_activity.action_type = "Target End Date";
+					}
+
+					frappe.model.set_value(first_activity.doctype, first_activity.name, "time", r.message);
+					frm.refresh_field("activities");
+				}
+			}
+		});
 }

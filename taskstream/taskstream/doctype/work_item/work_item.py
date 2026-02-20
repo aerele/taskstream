@@ -64,7 +64,7 @@ class WorkItem(Document):
 			self.has_value_changed(field)
 			for field in [
 				"reviewer",
-				"report_to",
+				"reporter",
 				"summary",
 				"description",
 				"assignee",
@@ -205,6 +205,16 @@ def check_date_validity(self, valid_dates):
 			"Weekdays": 4,
 		}
 		dates=[]
+		now = now_datetime()
+
+		def _as_datetime(date_value, time_value):
+			base = datetime.combine(date_value, datetime.min.time())
+			if isinstance(time_value, timedelta):
+				return base + time_value
+			if isinstance(time_value, time): # time is class
+				return datetime.combine(date_value, time_value)
+			return base
+
 		settings = frappe.get_single("Work Item Configuration")
 		skip_type = skip_map.get(settings.skip_holidays_based_on)
 		if skip_type == 4 and settings.include_saturday:
@@ -217,6 +227,8 @@ def check_date_validity(self, valid_dates):
 				
 		if frappe.db.exists("Module Def", "Setup") and skip_type == 0 and holiday_doc:
 			for date, time in valid_dates:
+				if _as_datetime(date, time) < now:
+					continue
 				if frappe.db.exists("Holiday", {"holiday_date": date, "parent": holiday_doc}):
 					while True:
 						if not frappe.db.exists("Holiday", {"holiday_date": date, "parent": holiday_doc}):
@@ -338,7 +350,7 @@ def calculate_planned_target(doc):
 	if planned_end_time:
 		planned_end_time = get_datetime(planned_end_time)
 
-		hr, mm, sec = map(int, sent_alert_on.split(':'))
+		hr, mm, sec = [int(float(x)) for x in sent_alert_on.split(':')]
 		total_minutes = hr * 60 + mm
 		reminder_delta = timedelta(minutes=total_minutes)
 		doc.twenty_percent_reminder_time = planned_end_time - reminder_delta
@@ -445,8 +457,8 @@ def sent_noti(work_item):
 			to.append(doc.reviewer)
 		if doc.assignee:
 			to.append(doc.assignee)
-		if doc.report_to:
-			to.append(doc.report_to)
+		if doc.reporter:
+			to.append(doc.reporter)
 		content = f"A work item <b>{doc.name}</b> has been updated.<br><a href='{frappe.utils.get_url()}/app/work-item/{doc.name}'>View Work Item</a>"
 		send_notifications(doc.name, content, to)
 
@@ -459,7 +471,7 @@ def create_sub_task(self, idx):
 		doc.summary = task.task_name
 		doc.idx = idx + 1
 		doc.description = task.task_description
-		doc.assignee = task.assignee or self.assignee
+		doc.assignee = task.assignee or self.assignee #TODO: implementation based on role 
 		hours_as_float = task.target_end_date_time.total_seconds() / 3600
 
 		doc.append("activities", {
@@ -468,3 +480,10 @@ def create_sub_task(self, idx):
 		})
 		doc.save(ignore_permissions=True)
 		sent_noti(doc.name)
+
+@frappe.whitelist()
+def update_target_end_on_start_date_change(work_flow_template, start_date_time):
+	duration = frappe.get_value("Work Flow Template Item", {"parent": work_flow_template, "idx": 1}, "target_end_date_time")
+	if duration and start_date_time:
+		target_end = get_datetime(start_date_time) + duration
+		return target_end.replace(second=0, microsecond=0)
