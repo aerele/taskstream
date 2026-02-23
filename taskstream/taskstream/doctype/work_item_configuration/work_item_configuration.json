@@ -9,9 +9,9 @@
   "max_delay_penalty",
   "max_rework_penalty",
   "penalty_points_per_day",
+  "column_break_rfmd",
   "penalty_per_minute",
   "sent_reminder_before",
-  "column_break_rfmd",
   "notification_tab",
   "email_alert",
   "system_notification",
@@ -25,16 +25,19 @@
  ],
  "fields": [
   {
+   "default": "20",
    "fieldname": "max_delay_penalty",
    "fieldtype": "Float",
    "label": "Max Delay Penalty"
   },
   {
+   "default": "20",
    "fieldname": "max_rework_penalty",
    "fieldtype": "Float",
    "label": "Max Rework Penalty"
   },
   {
+   "default": "10",
    "fieldname": "penalty_points_per_day",
    "fieldtype": "Float",
    "label": "Penalty points per day"
@@ -43,9 +46,11 @@
    "fieldname": "penalty_per_minute",
    "fieldtype": "Float",
    "label": "Penalty Per Minute",
-   "precision": "9"
+   "precision": "9",
+   "read_only": 1
   },
   {
+   "default": "5",
    "fieldname": "recurrence_creation_limit",
    "fieldtype": "Int",
    "label": "Recurrence Creation Limit"
@@ -126,7 +131,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-18 18:13:10.276862",
+ "modified": "2026-02-23 23:07:06.077689",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Configuration",

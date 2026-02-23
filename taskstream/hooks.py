@@ -83,7 +83,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "taskstream.install.before_install"
-# after_install = "taskstream.install.after_install"
+after_install = "taskstream.patches.install.execute"
 
 # Uninstallation
 # ------------
@@ -173,7 +173,7 @@ scheduler_events = {
 	"cron": {
 		"* * * * *": [
 			"taskstream.taskstream.doctype.work_item.work_item.send_twenty_percent_reminders",
-            "taskstream.taskstream.doctype.work_item.work_item.send_deadline_reminders"
+			"taskstream.taskstream.doctype.work_item.work_item.send_deadline_reminders",
 		]
 	}
 }
@@ -253,4 +253,3 @@ scheduler_events = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-

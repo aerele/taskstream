@@ -43,7 +43,8 @@
   "internal_section_section",
   "twenty_percent_reminder_time",
   "twenty_percent_reminder_sent",
-  "deadline_reminder_sent"
+  "deadline_reminder_sent",
+  "valid_dates"
  ],
  "fields": [
   {
@@ -174,7 +175,6 @@
   {
    "fieldname": "internal_section_section",
    "fieldtype": "Section Break",
-   "hidden": 1,
    "label": "Internal Section"
   },
   {
@@ -282,12 +282,17 @@
    "fieldtype": "Datetime",
    "label": "Start Date Time",
    "mandatory_depends_on": "eval: doc.work_flow_template"
+  },
+  {
+   "fieldname": "valid_dates",
+   "fieldtype": "Code",
+   "label": "Valid Dates"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-20 16:24:28.080991",
+ "modified": "2026-02-20 16:56:50.701050",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

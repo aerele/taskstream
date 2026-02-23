@@ -10,5 +10,3 @@ class WorkFlowTemplate(Document):
 		self.db_set("active", 1)
 		if self.previous_template_version:
 			frappe.db.set_value("Work Flow Template", self.previous_template_version, "active", 0)
-
-

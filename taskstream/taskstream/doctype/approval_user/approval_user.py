@@ -5,6 +5,5 @@
 from frappe.model.document import Document
 
 
-class WorkItemConfiguration(Document):
-	def validate(self):
-		self.penalty_per_minute = self.penalty_points_per_day / 1440
+class ApprovalUser(Document):
+	pass
