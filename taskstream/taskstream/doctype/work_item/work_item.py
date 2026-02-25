@@ -37,54 +37,51 @@ class WorkItem(Document):
 					(datetime.fromisoformat(d["date"]).date(), timedelta(seconds=d["time_seconds"]))
 					for d in valid_dates
 				]
-
-				# m = frappe.get_last_doc("Work Item Log", {"parent" : "WI-0012", "action_type": "Target End Date"}, "time")
-				# date = m.time.date()
-				# t = m.time.time()
-				# time = timedelta(
-				# 	hours=t.hour,
-				# 	minutes=t.minute,
-				# 	seconds=t.second
-				# )
+				current_slot = None
 				for rows in self.activities:
 					if rows.action_type == "Target End Date":
 						date_time = rows.time
 						date = date_time.date()
 						t = date_time.time()
-						time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
-				leng = valid_dates.index((date, time))
-				if leng + 1 < len(valid_dates):
-					next_date = valid_dates[leng + 1]
-					target_end_datetime = datetime.combine(next_date[0], datetime.min.time()) + next_date[1]
-					existing_with_same_target = bool(
-						frappe.db.sql(
-							"""
-							SELECT 1
-							FROM `tabWork Item` wi
-							INNER JOIN `tabWork Item Log` wil
-								ON wil.parent = wi.name
-								AND wil.parenttype = 'Work Item'
-								AND wil.parentfield = 'activities'
-							WHERE wi.reference_document = %s
-								AND wi.reference_doctype = %s
-								AND wi.summary = %s
-								AND wi.description = %s
-								AND wi.rework_count = 0
-								AND wil.action_type = 'Target End Date'
-								AND wil.time = %s
-							LIMIT 1
-							""",
-							(
-								self.reference_document,
-								self.reference_doctype,
-								self.summary,
-								self.description,
-								target_end_datetime,
-							),
+						target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+						current_slot = (date, target_time)
+
+				if current_slot and current_slot in valid_dates:
+					current_index = valid_dates.index(current_slot)
+					for next_date in valid_dates[current_index + 1 :]:
+						target_end_datetime = (
+							datetime.combine(next_date[0], datetime.min.time()) + next_date[1]
 						)
-					)
-					if existing_with_same_target:
-						create_work_item_recurrences(self, next_date[0], next_date[1])
+						existing_wi = bool(
+							frappe.db.sql(
+								"""
+								SELECT 1
+								FROM `tabWork Item` wi
+								INNER JOIN `tabWork Item Log` wil
+									ON wil.parent = wi.name
+									AND wil.parenttype = 'Work Item'
+									AND wil.parentfield = 'activities'
+								WHERE wi.reference_document = %s
+									AND wi.reference_doctype = %s
+									AND wi.summary = %s
+									AND wi.description = %s
+									AND wi.rework_count = 0
+									AND wil.action_type = 'Target End Date'
+									AND wil.time = %s
+								LIMIT 1
+								""",
+								(
+									self.reference_document,
+									self.reference_doctype,
+									self.summary,
+									self.description,
+									target_end_datetime,
+								),
+							)
+						)
+						if not existing_wi:
+							create_work_item_recurrences(self, next_date[0], next_date[1])
+							break
 
 	def validate_reviewer(self):
 		if self.reviewer == self.assignee:
@@ -427,15 +424,16 @@ def start_now(docname):
 @frappe.whitelist()
 def resend_for_rework(docname, rework_comments, target_end_date):
 	doc = frappe.get_doc("Work Item", docname)
-	doc.status = "To Do"
+	doc.status = "In Progress"
 	doc.rework_count += 1
-	doc.append(
-		"activities",
-		{
-			"action_type": "Target End Date",
-			"time": get_datetime(target_end_date).replace(second=0, microsecond=0),
-		},
-	)
+	if target_end_date:
+		doc.append(
+			"activities",
+			{
+				"action_type": "Target End Date",
+				"time": get_datetime(target_end_date).replace(second=0, microsecond=0),
+			},
+		)
 	doc.save(ignore_permissions=True)
 	doc.add_comment("Comment", rework_comments)
 	content = f"A work item <b>{docname}</b> has been sent for Rework - {rework_comments}.<br><a href='{frappe.utils.get_url()}/app/work-item/{docname}'>View Work Item</a>"
@@ -542,13 +540,17 @@ def calculate_score(doc):
 	config = frappe.get_single("Work Item Configuration")
 	total_delay_minutes = (actual_end_time - planned_end_time).total_seconds() / 60
 	if total_delay_minutes < 1440:
-		penalty = total_delay_minutes * config.penalty_per_minute
+		delay_penalty = total_delay_minutes * config.penalty_per_minute
 	else:
-		penalty = ((total_delay_minutes // 1440) * config.penalty_points_per_day) + (
+		delay_penalty = ((total_delay_minutes // 1440) * config.penalty_points_per_day) + (
 			(total_delay_minutes % 1440) * config.penalty_per_minute
 		)
-	max_points = config.max_delay_penalty if doc.rework_count == 0 else config.max_rework_penalty
-	doc.score = -min(penalty, max_points)
+	delay_penalty = min(delay_penalty, config.max_delay_penalty)
+	revision_penalty = (doc.revision_count / config.max_allowed_revision) * config.revision_impact
+	rework_penalty = (doc.rework_count / config.max_allowed_rework) * config.rework_impact
+	rework_penalty = min(rework_penalty, config.max_rework_penalty)
+	total_score = 0 - delay_penalty - revision_penalty - rework_penalty
+	doc.score = max(total_score, -100)
 
 
 @frappe.whitelist()

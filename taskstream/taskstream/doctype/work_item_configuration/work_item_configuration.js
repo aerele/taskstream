@@ -15,4 +15,19 @@ frappe.ui.form.on("Work Item Configuration", {
 			},
 		});
 	},
+	validate: function (frm) {
+		if (
+			frm.doc.completion_score +
+				frm.doc.penalty_points_per_day +
+				frm.doc.revision_impact +
+				frm.doc.rework_impact >
+			100
+		) {
+			frappe.throw(
+				__(
+					"Sum of Completion Score, Penalty Points per day, Revision Impact and Rework Impact cannot be greater than 100"
+				)
+			);
+		}
+	},
 });

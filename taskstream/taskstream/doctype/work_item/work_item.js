@@ -65,7 +65,6 @@ frappe.ui.form.on("Work Item", {
 							label: "Target End Date",
 							fieldname: "target_end_date",
 							fieldtype: "Datetime",
-							reqd: 1,
 						},
 					],
 					primary_action_label: "Submit",
@@ -75,7 +74,9 @@ frappe.ui.form.on("Work Item", {
 							args: {
 								docname: frm.doc.name,
 								rework_comments: values.rework_comments,
-								target_end_date: values.target_end_date,
+								target_end_date: values.target_end_date
+									? values.target_end_date
+									: null,
 							},
 							callback: function (r) {
 								if (!r.exc) {

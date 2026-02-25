@@ -24,13 +24,17 @@ def create_months():
 		"December",
 	]
 	for month in months:
-		frappe.get_doc({"doctype": "Month", "month": month}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Month", "month": month}).insert(
+			ignore_permissions=True, ignore_if_duplicate=True
+		)
 
 
 def create_weekdays():
 	weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 	for day in weekdays:
-		frappe.get_doc({"doctype": "Weekday", "day": day}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Weekday", "day": day}).insert(
+			ignore_permissions=True, ignore_if_duplicate=True
+		)
 
 
 def create_permissions():

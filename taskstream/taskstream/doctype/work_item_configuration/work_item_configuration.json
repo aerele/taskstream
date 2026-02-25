@@ -6,46 +6,57 @@
  "engine": "InnoDB",
  "field_order": [
   "recurrence_creation_limit",
-  "max_delay_penalty",
-  "max_rework_penalty",
-  "penalty_points_per_day",
-  "column_break_rfmd",
-  "penalty_per_minute",
   "sent_reminder_before",
-  "notification_tab",
-  "email_alert",
-  "system_notification",
+  "column_break_vuwy",
+  "max_rework_penalty",
+  "max_delay_penalty",
+  "section_break_fyaf",
+  "completion_score",
+  "penalty_points_per_day",
+  "revision_impact",
+  "rework_impact",
+  "column_break_rfmd",
+  "max_allowed_revision",
+  "max_allowed_rework",
+  "penalty_per_minute",
   "holiday_tab",
   "employee_configuration_section",
   "skip_holidays_based_on",
   "default_holiday",
   "include_saturday",
   "non_employee_configuration_section",
-  "include_saturday_nonemp"
+  "include_saturday_nonemp",
+  "notification_tab",
+  "email_alert",
+  "system_notification"
  ],
  "fields": [
   {
    "default": "20",
    "fieldname": "max_delay_penalty",
    "fieldtype": "Float",
-   "label": "Max Delay Penalty"
+   "label": "Max Delay Penalty",
+   "non_negative": 1
   },
   {
    "default": "20",
    "fieldname": "max_rework_penalty",
    "fieldtype": "Float",
-   "label": "Max Rework Penalty"
+   "label": "Max Rework Penalty",
+   "non_negative": 1
   },
   {
    "default": "10",
    "fieldname": "penalty_points_per_day",
    "fieldtype": "Float",
-   "label": "Penalty points per day"
+   "label": "Penalty points per day",
+   "non_negative": 1
   },
   {
    "fieldname": "penalty_per_minute",
    "fieldtype": "Float",
    "label": "Penalty Per Minute",
+   "non_negative": 1,
    "precision": "9",
    "read_only": 1
   },
@@ -53,12 +64,14 @@
    "default": "5",
    "fieldname": "recurrence_creation_limit",
    "fieldtype": "Int",
-   "label": "Recurrence Creation Limit"
+   "label": "Recurrence Creation Limit",
+   "non_negative": 1
   },
   {
    "description": "Hours before a Reminder should be sent before the deadline.",
    "fieldname": "sent_reminder_before",
    "fieldtype": "Time",
+   "hidden": 1,
    "label": "Sent Reminder Before"
   },
   {
@@ -125,13 +138,54 @@
    "fieldname": "include_saturday_nonemp",
    "fieldtype": "Check",
    "label": "Include Saturday as working day"
+  },
+  {
+   "fieldname": "revision_impact",
+   "fieldtype": "Int",
+   "label": "Revision Impact",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "rework_impact",
+   "fieldtype": "Int",
+   "label": "Rework Impact",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "column_break_vuwy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_fyaf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "completion_score",
+   "fieldtype": "Int",
+   "label": "Completion Score",
+   "non_negative": 1
+  },
+  {
+   "default": "10",
+   "fieldname": "max_allowed_revision",
+   "fieldtype": "Int",
+   "label": "Max Allowed Revision",
+   "non_negative": 1
+  },
+  {
+   "default": "10",
+   "fieldname": "max_allowed_rework",
+   "fieldtype": "Int",
+   "label": "Max Allowed Rework",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
+ "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-23 23:07:06.077689",
+ "modified": "2026-02-24 17:34:29.996120",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Configuration",
