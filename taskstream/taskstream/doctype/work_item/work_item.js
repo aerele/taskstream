@@ -10,7 +10,7 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	refresh: function (frm) {
-		const user = frappe.session.user;
+		const { user } = frappe.session;
 		// Mark Complete button
 		if (
 			(frm.doc.status === "In Progress" && !frm.doc.review_required) ||
@@ -74,9 +74,7 @@ frappe.ui.form.on("Work Item", {
 							args: {
 								docname: frm.doc.name,
 								rework_comments: values.rework_comments,
-								target_end_date: values.target_end_date
-									? values.target_end_date
-									: null,
+								target_end_date: values.target_end_date || null,
 							},
 							callback: function (r) {
 								if (!r.exc) {
@@ -91,7 +89,7 @@ frappe.ui.form.on("Work Item", {
 				d.show();
 			});
 		}
-
+		// Start Now Button
 		if (!frm.is_new() && frm.doc.status === "To Do" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Start Now"), function () {
 				frappe.call({
@@ -106,6 +104,7 @@ frappe.ui.form.on("Work Item", {
 				});
 			});
 		}
+		//Hold Button
 		if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Hold"), function () {
 				frappe.db.set_value("Work Item", frm.doc.name, "status", "On Hold").then(() => {
@@ -114,6 +113,7 @@ frappe.ui.form.on("Work Item", {
 				});
 			});
 		}
+		//Resume Button
 		if (frm.doc.status === "On Hold" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Resume"), function () {
 				frappe.db
@@ -124,76 +124,68 @@ frappe.ui.form.on("Work Item", {
 					});
 			});
 		}
+		// Send for Review button
 		if (!frm.is_new() && ["In Progress", "Under Review"].includes(frm.doc.status)) {
-			const isCritical = frm.doc.review_required;
+			const iscritical = frm.doc.review_required;
 
-			if (isCritical) {
-				if (user === frm.doc.assignee && frm.doc.status == "In Progress") {
-					frm.add_custom_button(__("Send for Review"), function () {
+			if (iscritical && user === frm.doc.assignee && frm.doc.status == "In Progress") {
+				frm.add_custom_button(__("Send for Review"), function () {
+					frappe.call({
+						method: "taskstream.taskstream.doctype.work_item.work_item.send_for_review",
+						args: {
+							docname: frm.doc.name,
+							reviewer: frm.doc.reviewer,
+						},
+						callback: function (r) {
+							if (!r.exc) {
+								frappe.msgprint(__("Sent for review!"));
+								frm.reload_doc();
+							}
+						},
+					});
+				});
+			}
+		}
+		//Time extension button
+		if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
+			frm.add_custom_button(__("Request Time Extension"), function () {
+				let d = new frappe.ui.Dialog({
+					title: "Request Time Extension",
+					fields: [
+						{
+							label: "Requested Target Date and Time",
+							fieldname: "req_target_date_time",
+							fieldtype: "Datetime",
+							reqd: 1,
+						},
+						{
+							label: "Reason",
+							fieldname: "reason",
+							fieldtype: "Small Text",
+							reqd: 1,
+						},
+					],
+					primary_action_label: "Submit",
+					primary_action(values) {
 						frappe.call({
-							method: "taskstream.taskstream.doctype.work_item.work_item.send_for_review",
+							method: "taskstream.taskstream.doctype.work_item.work_item.time_extension_request",
 							args: {
-								docname: frm.doc.name,
-								reviewer: frm.doc.reviewer,
+								doc: frm.doc.name,
+								reason: values.reason,
+								req_target_date_time: values.req_target_date_time,
 							},
 							callback: function (r) {
 								if (!r.exc) {
-									frappe.msgprint(__("Sent for review!"));
 									frm.reload_doc();
+									d.hide();
 								}
 							},
 						});
-					});
-				}
-
-				// if (user === frm.doc.reviewer && frm.doc.status == 'Under Review') {
-				// frm.add_custom_button(__('Resend for rework'), function () {
-				// 	frappe.call({
-				// 		method: 'taskstream.taskstream.doctype.work_item.work_item.resend_for_rework',
-				// 		args: { docname: frm.doc.name },
-				// 		callback: function (r) {
-				// 			if (!r.exc) {
-				// 				frappe.msgprint(__('Work Item has been sent for rework!'));
-				// 				frm.reload_doc();
-				// 			}
-				// 		}
-				// 	});
-				// });
-
-				// frm.add_custom_button(__('Mark Complete'), function () {
-				// 	frappe.call({
-				// 		method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
-				// 		args: { docname: frm.doc.name },
-				// 		callback: function (r) {
-				// 			if (!r.exc) {
-				// 				frappe.msgprint(__('Marked as Done!'));
-				// 				frm.reload_doc();
-				// 			}
-				// 		}
-				// 	});
-				// });
-				// }
-			}
-			// else {
-			// 	if (user === frm.doc.assignee) {
-			// 		frm.add_custom_button(__('Mark Complete'), function () {
-			// 			frappe.call({
-			// 				method: 'taskstream.taskstream.doctype.work_item.work_item.mark_complete',
-			// 				args: { docname: frm.doc.name },
-			// 				callback: function (r) {
-			// 					if (!r.exc) {
-			// 						frappe.msgprint(__('Marked as Done!'));
-			// 						frm.reload_doc();
-			// 					}
-			// 				}
-			// 			});
-			// 		});
-			// 	}
-			// }
+					},
+				});
+				d.show();
+			});
 		}
-
-		// const isDone = frm.doc.status === 'Done';
-		// frm.set_df_property('actual_duration', 'read_only', isDone);
 	},
 
 	validate: function (frm) {
@@ -218,39 +210,6 @@ frappe.ui.form.on("Work Item", {
 			frappe.throw("Assignee cannot be same as the Reviewer");
 		}
 	},
-
-	// async work_flow_template(frm) {
-	// 	const template = frm.doc.work_flow_template;
-	// 	if (!template) return;
-
-	// 	try {
-	// 		const template_doc = await frappe.db.get_doc("Work Flow Template", template);
-	// 		const first_task = (template_doc.tasks || [])[0];
-
-	// 		await frm.set_value("summary", first_task.task_name || "");
-	// 		await frm.set_value("description", first_task.task_description || "");
-	// 		await frm.set_value("idx", 1);
-
-	// 		if (first_task?.assignment_based_on === "User" && first_task.assignee) {
-	// 			await frm.set_value("assignee", first_task.assignee);
-	// 		}
-
-	// 		frappe.model.clear_table(frm.doc, "activities");
-	// 		if (first_task?.target_end_date_time) {
-	// 			const target_end = get_target_end_datetime(
-	// 				first_task.target_end_date_time,
-	// 				frm.doc.start_date_time
-	// 			);
-	// 			const row = frm.add_child("activities");
-	// 			row.action_type = "Target End Date";
-	// 			row.time = target_end;
-	// 		}
-	// 		frm.refresh_field("activities");
-	// 	} catch (error) {
-	// 		console.error(error);
-	// 		frappe.msgprint(__("Unable to load selected Work Flow Template."));
-	// 	}
-	// },
 
 	recurrence_type(frm) {
 		update_recurrence_description(frm);

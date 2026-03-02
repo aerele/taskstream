@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "WTE.#####",
  "creation": "2026-02-23 17:53:37.843977",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -11,8 +12,8 @@
   "reason",
   "requester",
   "approver",
-  "approved_by",
-  "approval_timestamp",
+  "reviewed_by",
+  "reviewed_on",
   "status",
   "requested_date"
  ],
@@ -46,39 +47,43 @@
   },
   {
    "fieldname": "approver",
-   "fieldtype": "Link",
+   "fieldtype": "Table MultiSelect",
    "label": "Approver",
-   "options": "User"
+   "options": "Approval User"
   },
   {
-   "fieldname": "approved_by",
-   "fieldtype": "Link",
-   "label": "Approved By",
-   "options": "User"
-  },
-  {
-   "fieldname": "approval_timestamp",
-   "fieldtype": "Datetime",
-   "label": "Approval Timestamp"
-  },
-  {
+   "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
-   "label": "Status"
+   "label": "Status",
+   "options": "Pending\nApproved\nRejected"
   },
   {
    "fieldname": "requested_date",
-   "fieldtype": "Date",
+   "fieldtype": "Datetime",
    "label": "Requested Date"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Reviewed By",
+   "options": "User"
+  },
+  {
+   "fieldname": "reviewed_on",
+   "fieldtype": "Datetime",
+   "label": "Reviewed On"
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-23 18:16:01.402419",
+ "modified": "2026-02-26 23:57:25.370224",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Time Extension",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

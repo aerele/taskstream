@@ -31,57 +31,59 @@ class WorkItem(Document):
 			if self.work_flow_template:
 				create_sub_task(self, self.idx)
 
-			if self.reference_document and self.reference_doctype:
-				valid_dates = json.loads(self.valid_dates) if self.valid_dates else []
-				valid_dates = [
-					(datetime.fromisoformat(d["date"]).date(), timedelta(seconds=d["time_seconds"]))
-					for d in valid_dates
-				]
-				current_slot = None
-				for rows in self.activities:
-					if rows.action_type == "Target End Date":
-						date_time = rows.time
-						date = date_time.date()
-						t = date_time.time()
-						target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
-						current_slot = (date, target_time)
+			self.create_work_item_recurrences()
 
-				if current_slot and current_slot in valid_dates:
-					current_index = valid_dates.index(current_slot)
-					for next_date in valid_dates[current_index + 1 :]:
-						target_end_datetime = (
-							datetime.combine(next_date[0], datetime.min.time()) + next_date[1]
-						)
-						existing_wi = bool(
-							frappe.db.sql(
-								"""
-								SELECT 1
-								FROM `tabWork Item` wi
-								INNER JOIN `tabWork Item Log` wil
-									ON wil.parent = wi.name
-									AND wil.parenttype = 'Work Item'
-									AND wil.parentfield = 'activities'
-								WHERE wi.reference_document = %s
-									AND wi.reference_doctype = %s
-									AND wi.summary = %s
-									AND wi.description = %s
-									AND wi.rework_count = 0
-									AND wil.action_type = 'Target End Date'
-									AND wil.time = %s
-								LIMIT 1
-								""",
-								(
-									self.reference_document,
-									self.reference_doctype,
-									self.summary,
-									self.description,
-									target_end_datetime,
-								),
-							)
-						)
-						if not existing_wi:
-							create_work_item_recurrences(self, next_date[0], next_date[1])
-							break
+	def create_work_item_recurrences(self):
+		if not (self.reference_document and self.reference_doctype):
+			return
+		valid_dates = json.loads(self.valid_dates) if self.valid_dates else []
+		valid_dates = [
+			(datetime.fromisoformat(d["date"]).date(), timedelta(seconds=d["time_seconds"]))
+			for d in valid_dates
+		]
+		current_slot = None
+		for rows in self.activities:
+			if rows.action_type == "Target End Date":
+				date_time = rows.time
+				date = date_time.date()
+				t = date_time.time()
+				target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+				current_slot = (date, target_time)
+
+		if current_slot and current_slot in valid_dates:
+			current_index = valid_dates.index(current_slot)
+			for next_date in valid_dates[current_index + 1 :]:
+				target_end_datetime = datetime.combine(next_date[0], datetime.min.time()) + next_date[1]
+				existing_wi = bool(
+					frappe.db.sql(
+						"""
+						SELECT 1
+						FROM `tabWork Item` wi
+						INNER JOIN `tabWork Item Log` wil
+							ON wil.parent = wi.name
+							AND wil.parenttype = 'Work Item'
+							AND wil.parentfield = 'activities'
+						WHERE wi.reference_document = %s
+							AND wi.reference_doctype = %s
+							AND wi.summary = %s
+							AND wi.description = %s
+							AND wi.rework_count = 0
+							AND wil.action_type = 'Target End Date'
+							AND wil.time = %s
+						LIMIT 1
+						""",
+						(
+							self.reference_document,
+							self.reference_doctype,
+							self.summary,
+							self.description,
+							target_end_datetime,
+						),
+					)
+				)
+				if not existing_wi:
+					create_work_item_recurrences(self, next_date[0], next_date[1])
+					break
 
 	def validate_reviewer(self):
 		if self.reviewer == self.assignee:
@@ -124,7 +126,7 @@ class WorkItem(Document):
 		if not (key_field_changed):
 			return
 
-		if key_field_changed and self.owner != frappe.session.user:
+		if self.owner != frappe.session.user:
 			frappe.throw("Only the owner can modify key details of this Work Item.")
 
 		if self.first_mail:
@@ -141,15 +143,15 @@ class WorkItem(Document):
 		values = _get_valid_dates(self, start_date, end_date)
 
 		serialized_valid_dates = []
-		for valid_date, recurrence_time in values:
-			serialized_valid_dates.append(
-				{
-					"date": valid_date.isoformat(),
-					"time_seconds": int(recurrence_time.total_seconds())
-					if isinstance(recurrence_time, timedelta)
-					else 0,
-				}
-			)
+		serialized_valid_dates.extend(
+			{
+				"date": valid_date.isoformat(),
+				"time_seconds": (
+					int(recurrence_time.total_seconds()) if isinstance(recurrence_time, timedelta) else 0
+				),
+			}
+			for valid_date, recurrence_time in values
+		)
 		self.db_set("valid_dates", json.dumps(serialized_valid_dates))
 
 		creatable_values = [value for value in values if value[0] <= max_creation_date]
@@ -265,7 +267,7 @@ def _get_valid_dates(self, start_date, end_date):
 		days = [int(d.recurrence_date) for d in self.recurrence_date]
 		months = [m.month for m in self.recurrence_month]
 
-		years = [year for year in range(start_date.year, end_date.year + 1, frequency)]
+		years = list(range(start_date.year, end_date.year + 1, frequency))
 		date_combinations = [
 			(year, month_map.get(month), day) for year in years for month in months for day in days
 		]
@@ -360,10 +362,7 @@ def _get_nth_weekday(year, month, weekday, occurrence):
 		if (target_date + timedelta(weeks=1)).month == month:
 			target_date += timedelta(weeks=1)
 
-	if target_date.month != month:
-		return None
-
-	return target_date.date()
+	return None if target_date.month != month else target_date.date()
 
 
 def create_work_item_recurrences(wi_doc, date, recurrence_time):
@@ -444,14 +443,12 @@ def calculate_planned_target(doc):
 	planned_end_time = None
 
 	for row in doc.activities:
-		if row.action_type == "Target End Date":
-			if planned_end_time is None or row.time > planned_end_time:
-				planned_end_time = row.time
+		if row.action_type == "Target End Date" and (planned_end_time is None or row.time > planned_end_time):
+			planned_end_time = row.time
 
-	sent_alert_on = frappe.get_single_value("Work Item Configuration", "sent_reminder_before")
 	if planned_end_time:
 		planned_end_time = get_datetime(planned_end_time)
-
+		sent_alert_on = frappe.get_single_value("Work Item Configuration", "sent_reminder_before")
 		hr, mm, sec = [int(float(x)) for x in sent_alert_on.split(":")]
 		total_minutes = hr * 60 + mm
 		reminder_delta = timedelta(minutes=total_minutes)
@@ -606,3 +603,27 @@ def update_target_end_on_start_date_change(work_flow_template, start_date_time):
 	if duration and start_date_time:
 		target_end = get_datetime(start_date_time) + duration
 		return target_end.replace(second=0, microsecond=0)
+
+
+@frappe.whitelist()
+def time_extension_request(doc, reason, req_target_date_time):
+	doc = frappe.get_doc("Work Item", doc)
+	to = []
+	for row in doc.activities:
+		if row.action_type == "Target End Date":
+			current_target_date = row.time
+
+	ext_doc = frappe.new_doc("Work Item Time Extension")
+	ext_doc.work_item_reference = doc.name
+	ext_doc.current_target_date = current_target_date
+	ext_doc.requested_due_date = req_target_date_time
+	ext_doc.reason = reason
+	ext_doc.requester = doc.assignee
+	for approver in {doc.requester, doc.reporter}:
+		if approver:
+			ext_doc.append("approver", {"user": approver})
+			to.append(approver)
+	ext_doc.requested_date = now_datetime()
+	ext_doc.save()
+	content = f"A time extension request has been raised by {doc.assignee} for work item {doc.name}. Click <a href='{frappe.utils.get_url()}/app/work-item-time-extension/{ext_doc.name}'>here</a> to view the request"
+	send_notifications(doc.name, content, to, doctype="Work Item Time Extension", docname=ext_doc.name)

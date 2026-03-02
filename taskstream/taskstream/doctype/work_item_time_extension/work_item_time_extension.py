@@ -1,9 +1,24 @@
 # Copyright (c) 2026, Chethan - Aerele and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
 from frappe.model.document import Document
+from frappe.utils import now_datetime
 
 
 class WorkItemTimeExtension(Document):
 	pass
+
+
+@frappe.whitelist()
+def update_status(docname, status):
+	wit = frappe.get_doc("Work Item Time Extension", docname)
+	wit.reviewed_by = frappe.session.user
+	wit.reviewed_on = now_datetime().replace(second=0, microsecond=0)
+	wit.status = status
+	if status == "Approved":
+		# add the requested_due_date date to the work item in the wit.work_item_reference, efficiently(new doc to hcild table ?)
+		wit_doc = frappe.get_doc("Work Item", wit.work_item_reference)
+		wit_doc.append("activities", {"action_type": "Target End Date", "time": wit.requested_due_date})
+		wit_doc.save()
+	wit.save()

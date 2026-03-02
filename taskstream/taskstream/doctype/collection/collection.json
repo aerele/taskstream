@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "collection_name",
+  "description",
   "work_items"
  ],
  "fields": [
@@ -19,12 +20,17 @@
    "fieldtype": "Table",
    "label": "Work Items",
    "options": "Collection Item"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-06 17:50:25.743407",
+ "modified": "2026-02-27 18:26:58.549703",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Collection",
