@@ -1,6 +1,34 @@
 // Copyright (c) 2025, Chethan - Aerele and contributors
 // For license information, please see license.txt
 
+// const UPDATE_WI_MODAL_EXCLUDED_FIELDS = [
+// 	"name",
+// 	"owner",
+// 	"creation",
+// 	"modified",
+// 	"modified_by",
+// 	"amended_from",
+// 	"docstatus",
+// 	"status",
+// 	"first_mail",
+// 	"twenty_percent_reminder_time",
+// 	"twenty_percent_reminder_sent",
+// 	"deadline_reminder_sent",
+// 	"valid_dates",
+// ];
+// const RECURRENCE_MODAL_FIELDNAMES = [
+// 	"recurrence_type",
+// 	"recurrence_frequency",
+// 	"recurrence_day",
+// 	"recurrence_month",
+// 	"monthly_recurrence_based_on",
+// 	"recurrence_date",
+// 	"recurrence_day_occurrence",
+// 	"recurrence_time",
+// 	"repeat_until",
+// ];
+// const UPDATE_WI_MODAL_ALWAYS_INCLUDE_FIELDS = ["reviewer", ...RECURRENCE_MODAL_FIELDNAMES];
+
 frappe.ui.form.on("Work Item", {
 	onload: function (frm) {
 		if (frm.is_new() && !frm.doc.reporter) {
@@ -10,6 +38,68 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	refresh: function (frm) {
+		// if (!frm.is_new()) {
+		// 	frm.add_custom_button(__("Update WI"), function () {
+		// 		const editable_fields = get_visible_dialog_fields(frm);
+		// 		const dialog_fields = editable_fields
+		// 			.map((df) => build_dialog_field(df, frm))
+		// 			.concat([
+		// 				{
+		// 					fieldname: "one_time_change",
+		// 					fieldtype: "Check",
+		// 					label: "One time Change",
+		// 					default: 0,
+		// 				},
+		// 				{
+		// 					fieldname: "change_date",
+		// 					fieldtype: "Date",
+		// 					label: "Change Date",
+		// 					depends_on: "eval:doc.one_time_change==1",
+		// 				},
+		// 			]);
+
+		// 		const d = new frappe.ui.Dialog({
+		// 			title: __("Update Work Item"),
+		// 			fields: dialog_fields,
+		// 			primary_action_label: __("Submit"),
+		// 			primary_action(values) {
+		// 				if (values.one_time_change && !values.change_date) {
+		// 					frappe.msgprint(__("Change Date is required when One time Change is checked."));
+		// 					return;
+		// 				}
+
+		// 				const field_values = {};
+		// 				editable_fields.forEach((df) => {
+		// 					if (values[df.fieldname] !== undefined) {
+		// 						field_values[df.fieldname] = values[df.fieldname];
+		// 					}
+		// 				});
+
+		// 				frappe.call({
+		// 					method: "taskstream.taskstream.doctype.work_item.work_item.update_work_items",
+		// 					args: {
+		// 						work_item: frm.doc.name,
+		// 						field_values,
+		// 						one_time_change: !!values.one_time_change,
+		// 						change_date: values.change_date || null,
+		// 					},
+		// 					callback: function (r) {
+		// 						if (r.exc) return;
+		// 						frappe.show_alert({
+		// 							message: __("Work Item(s) updated"),
+		// 							indicator: "green",
+		// 						});
+		// 						d.hide();
+		// 						frm.reload_doc();
+		// 					},
+		// 				});
+		// 			},
+		// 		});
+
+		// 		d.show();
+		// 		initialize_dialog_table_data(d, frm, editable_fields, 0);
+		// 	});
+		// }
 		const { user } = frappe.session;
 		// Mark Complete button
 		if (
@@ -186,6 +276,75 @@ frappe.ui.form.on("Work Item", {
 				d.show();
 			});
 		}
+		// Set Read Only for non reporter and non requester
+		if (!frm.is_new() && user !== frm.doc.reporter && user !== frm.doc.requester) {
+			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
+			fieldnames.forEach((field) => {
+				if (field != "percent_completed") {
+					frm.set_df_property(field, "read_only", 1);
+				}
+			});
+		}
+		//Update Recurrence Type options
+		const options = "One Time\nDaily\nWeekly\nMonthly\nYearly";
+		frm.set_df_property("recurrence_type", "options", options);
+		frm.refresh_field("recurrence_type");
+		//Reassignment
+		const approved_users_for_reassignment = [
+			frm.doc.assignee,
+			frm.doc.reporter,
+			frm.doc.requester,
+		];
+		if (frm.doc.status === "In Progress" && user in approved_users_for_reassignment) {
+			frm.add_custom_button(__("Reassign"), function () {
+				let d = new frappe.ui.Dialog({
+					title: "Reassignment",
+					fields: [
+						{
+							label: "Current Assignee",
+							fieldname: "current_assignee",
+							fieldtype: "Link",
+							options: "User",
+							read_only: 1,
+							default: frm.doc.assignee,
+						},
+						{
+							label: "Assign To",
+							fieldname: "new_assignee",
+							fieldtype: "Link",
+							options: "User",
+							reqd: 1,
+						},
+						{
+							label: "Reason/Remarks",
+							fieldname: "reason",
+							fieldtype: "Small Text",
+							reqd: 1,
+						},
+					],
+					primary_action_label: "Submit",
+					primary_action(values) {
+						frappe.call({
+							method: "taskstream.taskstream.doctype.work_item.work_item.reassign",
+							args: {
+								wi: frm.doc.name,
+								new_assignee: values.new_assignee,
+								current_assignee: values.current_assignee,
+								reason: values.reason,
+							},
+							callback: function (r) {
+								if (!r.exc) {
+									frm.reload_doc();
+									d.hide();
+								}
+							},
+						});
+						d.hide();
+					},
+				});
+				d.show();
+			});
+		}
 	},
 
 	validate: function (frm) {
@@ -195,8 +354,12 @@ frappe.ui.form.on("Work Item", {
 	review_required: function (frm) {
 		if (frm.doc.review_required && !frm.doc.reviewer) {
 			frm.set_value("reviewer", frappe.session.user);
+			frm.set_df_property("reviewer", "reqd", frm.doc.review_required);
 		}
-		frm.set_df_property("reviewer", "reqd", frm.doc.review_required);
+		if (!frm.doc.review_required) {
+			frm.set_value("reviewer", "");
+		}
+		frm.refresh_field("reviewer");
 	},
 
 	reviewer: function (frm) {
@@ -209,6 +372,17 @@ frappe.ui.form.on("Work Item", {
 		if (frm.doc.reviewer == frm.doc.assignee) {
 			frappe.throw("Assignee cannot be same as the Reviewer");
 		}
+	},
+
+	percent_completed: async function (frm) {
+		const completion_score = await frappe.db.get_single_value(
+			"Work Item Configuration",
+			"completion_score"
+		);
+		const considerable_score = flt(completion_score) / 2;
+		const { percent_completed } = frm.doc;
+		const score = (flt(percent_completed) / 100) * considerable_score;
+		frm.set_value("score", score);
 	},
 
 	recurrence_type(frm) {
@@ -327,6 +501,129 @@ function validate_recurrence_time(frm, cdt, cdn) {
 		}
 	}
 }
+
+// function build_dialog_field(df, frm) {
+// 	const field = { ...df };
+// 	const value = frm.doc[df.fieldname];
+// 	if (["Table", "Table MultiSelect"].includes(df.fieldtype)) {
+// 		// Dialog dependencies can prevent child grids from being instantiated in time.
+// 		// Keep table fields visible so existing rows can always be bound.
+// 		delete field.depends_on;
+// 		delete field.mandatory_depends_on;
+// 		const child_meta = frappe.get_meta(df.options);
+// 		field.in_place_edit = true;
+// 		field.cannot_add_rows = false;
+// 		field.data = (value || []).map(row => normalize_child_row(df.fieldname, sanitize_child_row(row)));
+// 		field.fields = (child_meta.fields || [])
+// 			.filter(col =>
+// 				!col.hidden &&
+// 				!col.read_only &&
+// 				!["Section Break", "Column Break", "Tab Break", "Button", "Fold", "HTML"].includes(col.fieldtype)
+// 			)
+// 			.map(col => ({ ...col, in_list_view: 1 }));
+// 		field.get_data = () => field.data;
+// 	} else {
+// 		field.default = value;
+// 	}
+// 	return field;
+// }
+
+// function initialize_dialog_table_data(dialog, frm, fields, attempt = 0) {
+// 	let pending = false;
+// 	fields
+// 		.filter(df => ["Table", "Table MultiSelect"].includes(df.fieldtype))
+// 		.forEach(df => {
+// 			const table_field = dialog.fields_dict[df.fieldname];
+// 			if (!table_field || !table_field.grid) {
+// 				pending = true;
+// 				return;
+// 			}
+
+// 			const rows = (frm.doc[df.fieldname] || []).map(row =>
+// 				normalize_child_row(df.fieldname, sanitize_child_row(row))
+// 			);
+// 			table_field.df.data = rows;
+// 			table_field.grid.df.data = rows;
+// 			table_field.df.get_data = () => table_field.df.data || [];
+// 			table_field.grid.refresh();
+// 		});
+
+// 	if (pending && attempt < 5) {
+// 		setTimeout(() => initialize_dialog_table_data(dialog, frm, fields, attempt + 1), 120);
+// 	}
+// }
+
+// async function apply_dialog_values_to_form(frm, fields, values) {
+// 	for (const df of fields) {
+// 		if (!df.fieldname) continue;
+// 		if (["Table", "Table MultiSelect"].includes(df.fieldtype)) {
+// 			frm.clear_table(df.fieldname);
+// 			(values[df.fieldname] || []).forEach(row => {
+// 				frm.add_child(df.fieldname, normalize_child_row(df.fieldname, sanitize_child_row(row)));
+// 			});
+// 			frm.refresh_field(df.fieldname);
+// 		} else if (values[df.fieldname] !== undefined) {
+// 			await frm.set_value(df.fieldname, values[df.fieldname]);
+// 		}
+// 	}
+// }
+
+// function normalize_child_row(parent_fieldname, row) {
+// 	const clean_row = { ...row };
+// 	if (parent_fieldname === "recurrence_time") {
+// 		clean_row.recurrence_time = normalize_recurrence_hour(clean_row.recurrence_time);
+// 	}
+// 	return clean_row;
+// }
+
+// function normalize_recurrence_hour(value) {
+// 	if (value === undefined || value === null || value === "") return value;
+// 	const raw = String(value).trim();
+// 	if (/^\d{2}$/.test(raw)) return raw;
+// 	if (/^\d{1}$/.test(raw)) return raw.padStart(2, "0");
+// 	const hour = raw.includes(":") ? raw.split(":")[0] : raw;
+// 	const numeric_hour = parseInt(hour, 10);
+// 	if (!Number.isNaN(numeric_hour) && numeric_hour >= 0 && numeric_hour <= 23) {
+// 		return String(numeric_hour).padStart(2, "0");
+// 	}
+// 	return raw;
+// }
+
+// function sanitize_child_row(row) {
+// 	const clean_row = { ...row };
+// 	delete clean_row.name;
+// 	delete clean_row.parent;
+// 	delete clean_row.parentfield;
+// 	delete clean_row.parenttype;
+// 	delete clean_row.docstatus;
+// 	delete clean_row.__islocal;
+// 	delete clean_row.__unsaved;
+// 	delete clean_row.owner;
+// 	delete clean_row.creation;
+// 	delete clean_row.modified;
+// 	delete clean_row.modified_by;
+// 	return clean_row;
+// }
+
+// function get_visible_dialog_fields(frm) {
+// 	const excluded_fieldtypes = ["Section Break", "Column Break", "Tab Break", "Button", "Fold", "HTML"];
+// 	const excluded_fieldnames = new Set(UPDATE_WI_MODAL_EXCLUDED_FIELDS);
+
+// 	return (frm.meta.fields || []).filter((df) => {
+// 		if (!df.fieldname) return false;
+// 		if (excluded_fieldtypes.includes(df.fieldtype)) return false;
+// 		if (excluded_fieldnames.has(df.fieldname)) return false;
+// 		if (df.hidden) return false;
+// 		if (is_field_visible(frm, df.fieldname)) return true;
+// 		return UPDATE_WI_MODAL_ALWAYS_INCLUDE_FIELDS.includes(df.fieldname);
+// 	});
+// }
+
+// function is_field_visible(frm, fieldname) {
+// 	const field = frm.get_field(fieldname);
+// 	if (!field || !field.$wrapper) return true;
+// 	return field.$wrapper.is(":visible");
+// }
 
 function update_recurrence_description(frm) {
 	const freq = frm.doc.recurrence_frequency || 1;
@@ -449,6 +746,7 @@ function update_recurrence_description(frm) {
 		return;
 	}
 }
+
 function get_target_end_datetime(duration, base_datetime) {
 	const [hours = 0, minutes = 0, seconds = 0] = String(duration || "00:00:00")
 		.split(":")

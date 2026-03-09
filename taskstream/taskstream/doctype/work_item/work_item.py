@@ -6,21 +6,24 @@ from datetime import datetime, time, timedelta
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import get_datetime, now_datetime
+from frappe.utils import cint, get_datetime, now_datetime
 
 from taskstream.taskstream import send_notifications
 
 
 class WorkItem(Document):
 	def validate(self):
-		if self.recurrence_type == "One Time":
+		if self.recurrence_type in ["One Time", "Recurring Instance"]:
 			planned_end_exists = any(row.action_type == "Target End Date" for row in self.activities)
 			if not planned_end_exists:
 				frappe.throw("Activities must include one 'Target End Date' entry.")
 
 			self.validate_reviewer()
 			self.validate_recurrence_date()
-			if self.recurrence_type != "One Time" and self.monthly_recurrence_based_on == "Date":
+			if (
+				self.recurrence_type not in ["One Time", "Recurring Instance"]
+				and self.monthly_recurrence_based_on == "Date"
+			):
 				self.validate_recurrence_time()
 
 		if self.status == "In Progress":
@@ -126,14 +129,14 @@ class WorkItem(Document):
 		if not (key_field_changed):
 			return
 
-		if self.owner != frappe.session.user:
+		if frappe.session.user not in [self.reporter, self.requester]:
 			frappe.throw("Only the owner can modify key details of this Work Item.")
 
 		if self.first_mail:
 			sent_noti(self.name)
 
 	def after_insert(self):
-		if self.recurrence_type == "One Time":
+		if self.recurrence_type in ["One Time", "Recurring Instance"]:
 			return
 		creation_limit = frappe.get_single_value("Work Item Configuration", "recurrence_creation_limit")
 
@@ -368,7 +371,7 @@ def _get_nth_weekday(year, month, weekday, occurrence):
 def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	new_wi = frappe.copy_doc(wi_doc)
 	new_wi.name = None
-	new_wi.recurrence_type = "One Time"
+	new_wi.recurrence_type = "Recurring Instance"
 	new_wi.recurrence_date = []
 	new_wi.recurrence_time = []
 	new_wi.activities = []
@@ -627,3 +630,126 @@ def time_extension_request(doc, reason, req_target_date_time):
 	ext_doc.save()
 	content = f"A time extension request has been raised by {doc.assignee} for work item {doc.name}. Click <a href='{frappe.utils.get_url()}/app/work-item-time-extension/{ext_doc.name}'>here</a> to view the request"
 	send_notifications(doc.name, content, to, doctype="Work Item Time Extension", docname=ext_doc.name)
+
+
+@frappe.whitelist()
+def reassign(wi, new_assignee, current_assignee, reason):
+	reassign_doc = frappe.new_doc("Reassignment History")
+	reassign_doc.work_item_ref = wi
+	reassign_doc.assignee_from = current_assignee
+	reassign_doc.assignee_to = new_assignee
+	reassign_doc.reasonremarks = reason
+	reassign_doc.reassignment_date_time = now_datetime()
+	reassign_doc.reassigned_by = frappe.session.user
+	reassign_doc.save()
+	frappe.db.set_value("Work Item", wi, "assignee", new_assignee)
+	content = "Re-Assignment has been initiated. Click <a href='{frappe.utils.get_url()}/app/work-item/{wi}'>here</a> to view the work item"
+	to = [
+		current_assignee,
+		new_assignee,
+	]
+	send_notifications(wi, content, to, doctype=None, docname=None)
+
+
+# @frappe.whitelist()
+# def update_work_items(work_item, field_values=None, one_time_change=0, change_date=None):
+# 	field_values = _ensure_dict(field_values)
+# 	if not field_values:
+# 		return {"updated": 0}
+
+# 	wi = frappe.get_doc("Work Item", work_item)
+# 	docnames = _get_target_work_items(wi, one_time_change, change_date)
+# 	if not docnames:
+# 		return {"updated": 0}
+
+# 	updated = 0
+# 	for name in docnames:
+# 		doc = frappe.get_doc("Work Item", name)
+# 		for fieldname, value in field_values.items():
+# 			if fieldname in ("name", "status", "docstatus"):
+# 				continue
+# 			if not hasattr(doc, fieldname):
+# 				continue
+# 			doc.set(fieldname, value)
+# 		doc.save(ignore_permissions=True)
+# 		updated += 1
+
+# 	return {"updated": updated}
+
+
+# def _get_target_work_items(wi, one_time_change, change_date):
+# 	if cint(one_time_change):
+# 		if not change_date:
+# 			frappe.throw("Change Date is required for one time change.")
+# 		return _get_work_items_for_date(wi, change_date)
+
+# 	return _get_open_related_work_items(wi)
+
+
+# def _get_open_related_work_items(wi):
+# 	if wi.reference_doctype == "Work Item" and wi.reference_document:
+# 		root = wi.reference_document
+# 		return frappe.get_all(
+# 			"Work Item",
+# 			filters=[
+# 				["Work Item", "status", "!=", "Done"],
+# 				["Work Item", "name", "in", [root] + _get_child_work_item_names(root)],
+# 			],
+# 			pluck="name",
+# 		)
+
+# 	if wi.reference_doctype and wi.reference_document:
+# 		return frappe.get_all(
+# 			"Work Item",
+# 			filters={
+# 				"reference_doctype": wi.reference_doctype,
+# 				"reference_document": wi.reference_document,
+# 				"status": ["!=", "Done"],
+# 			},
+# 			pluck="name",
+# 		)
+
+# 	return [wi.name] if wi.status != "Done" else []
+
+
+# def _get_work_items_for_date(wi, change_date):
+# 	candidates = _get_open_related_work_items(wi)
+# 	if not candidates:
+# 		return []
+
+# 	rows = frappe.db.sql(
+# 		"""
+# 		SELECT DISTINCT wil.parent
+# 		FROM `tabWork Item Log` wil
+# 		WHERE wil.parenttype = 'Work Item'
+# 			AND wil.parentfield = 'activities'
+# 			AND wil.action_type = 'Target End Date'
+# 			AND DATE(wil.time) = %(change_date)s
+# 			AND wil.parent IN %(candidates)s
+# 		""",
+# 		{"candidates": tuple(candidates), "change_date": change_date},
+# 		as_dict=True,
+# 	)
+# 	return [row.parent for row in rows]
+
+
+# def _get_child_work_item_names(root):
+# 	return frappe.get_all(
+# 		"Work Item",
+# 		filters={"reference_doctype": "Work Item", "reference_document": root},
+# 		pluck="name",
+# 	)
+
+
+# def _ensure_dict(value):
+# 	if not value:
+# 		return {}
+# 	if isinstance(value, dict):
+# 		return value
+# 	if isinstance(value, str):
+# 		try:
+# 			parsed = json.loads(value)
+# 			return parsed if isinstance(parsed, dict) else {}
+# 		except Exception:
+# 			return {}
+# 	return {}

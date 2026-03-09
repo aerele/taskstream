@@ -81,7 +81,7 @@
    "fieldname": "recurrence_type",
    "fieldtype": "Select",
    "label": "Recurrence Type",
-   "options": "One Time\nDaily\nWeekly\nMonthly\nYearly"
+   "options": "One Time\nDaily\nWeekly\nMonthly\nYearly\nRecurring Instance"
   },
   {
    "depends_on": "review_required",
@@ -183,18 +183,21 @@
   {
    "fieldname": "twenty_percent_reminder_time",
    "fieldtype": "Datetime",
+   "hidden": 1,
    "label": "Twenty Percent Reminder Time"
   },
   {
    "default": "0",
    "fieldname": "twenty_percent_reminder_sent",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Twenty Percent Reminder Sent"
   },
   {
    "default": "0",
    "fieldname": "deadline_reminder_sent",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Deadline Reminder Sent"
   },
   {
@@ -289,12 +292,14 @@
   {
    "fieldname": "valid_dates",
    "fieldtype": "Code",
+   "hidden": 1,
    "label": "Valid Dates"
   },
   {
    "fieldname": "revision_count",
    "fieldtype": "Int",
-   "label": "Revision Count"
+   "label": "Revision Count",
+   "read_only": 1
   },
   {
    "fieldname": "percent_completed",
@@ -305,7 +310,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-25 13:12:51.925264",
+ "modified": "2026-03-09 12:15:53.137307",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
