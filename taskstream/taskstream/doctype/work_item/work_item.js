@@ -286,9 +286,11 @@ frappe.ui.form.on("Work Item", {
 			});
 		}
 		//Update Recurrence Type options
-		const options = "One Time\nDaily\nWeekly\nMonthly\nYearly";
-		frm.set_df_property("recurrence_type", "options", options);
-		frm.refresh_field("recurrence_type");
+		if (frm.doc.recurrence_type != "Recurring Instance") {
+			const options = "One Time\nDaily\nWeekly\nMonthly\nYearly";
+			frm.set_df_property("recurrence_type", "options", options);
+			frm.refresh_field("recurrence_type");
+		}
 		//Reassignment
 		const approved_users_for_reassignment = [
 			frm.doc.assignee,
