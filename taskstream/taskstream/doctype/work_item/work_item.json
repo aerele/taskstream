@@ -227,13 +227,15 @@
    "fieldname": "reference_doctype",
    "fieldtype": "Link",
    "label": "Reference DocType",
-   "options": "DocType"
+   "options": "DocType",
+   "read_only": 1
   },
   {
    "fieldname": "reference_document",
    "fieldtype": "Dynamic Link",
    "label": "Reference Document",
-   "options": "reference_doctype"
+   "options": "reference_doctype",
+   "read_only": 1
   },
   {
    "fieldname": "reporter",
@@ -302,6 +304,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.status == \"In Progress\"",
    "fieldname": "percent_completed",
    "fieldtype": "Percent",
    "label": "Percent Completed"
@@ -310,7 +313,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-09 12:15:53.137307",
+ "modified": "2026-03-09 16:22:38.442689",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
