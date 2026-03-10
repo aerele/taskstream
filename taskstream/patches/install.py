@@ -6,6 +6,7 @@ def execute():
 	create_months()
 	create_weekdays()
 	create_permissions()
+	create_role()
 
 
 def create_months():
@@ -64,3 +65,9 @@ def create_permissions():
 			update_permission_property(doctype, "All", 0, permission, 1)
 		if if_owner:
 			update_permission_property(doctype, "All", 0, "if_owner", 1)
+
+
+def create_role():
+	frappe.get_doc({"doctype": "Role", "role_name": "Work Item Admin"}).insert(
+		ignore_permissions=True, ignore_if_duplicate=True
+	)
