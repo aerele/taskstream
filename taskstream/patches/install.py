@@ -48,6 +48,7 @@ def create_permissions():
 			"permissions": ["read", "select", "write", "create", "submit", "cancel", "delete"],
 			"if_owner": 1,
 		},
+		"Reassignment History": ["read", "select", "write", "create"],
 	}
 
 	for doctype, config in doctype_permissions.items():

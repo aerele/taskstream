@@ -5,6 +5,11 @@ def work_item_user_condition(user=None):
 	if not user:
 		user = frappe.session.user
 
+	roles = frappe.get_roles(user) or []
+
+	if user == "Administrator" or "Work Item Admin" in roles:
+		return "1=1"
+
 	escaped_user = frappe.db.escape(user)
 	recurrence_filter = "COALESCE(`tabWork Item`.recurrence_type, '')"
 

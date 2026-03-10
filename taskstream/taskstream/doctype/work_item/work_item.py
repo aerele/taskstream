@@ -421,6 +421,7 @@ def mark_complete(docname):
 @frappe.whitelist()
 def start_now(docname):
 	frappe.db.set_value("Work Item", docname, "status", "In Progress")
+	frappe.db.set_value("Work Item", docname, "first_mail", 1)
 
 
 @frappe.whitelist()
@@ -651,105 +652,72 @@ def reassign(wi, new_assignee, current_assignee, reason):
 	send_notifications(wi, content, to, doctype=None, docname=None)
 
 
-# @frappe.whitelist()
-# def update_work_items(work_item, field_values=None, one_time_change=0, change_date=None):
-# 	field_values = _ensure_dict(field_values)
-# 	if not field_values:
-# 		return {"updated": 0}
-
-# 	wi = frappe.get_doc("Work Item", work_item)
-# 	docnames = _get_target_work_items(wi, one_time_change, change_date)
-# 	if not docnames:
-# 		return {"updated": 0}
-
-# 	updated = 0
-# 	for name in docnames:
-# 		doc = frappe.get_doc("Work Item", name)
-# 		for fieldname, value in field_values.items():
-# 			if fieldname in ("name", "status", "docstatus"):
-# 				continue
-# 			if not hasattr(doc, fieldname):
-# 				continue
-# 			doc.set(fieldname, value)
-# 		doc.save(ignore_permissions=True)
-# 		updated += 1
-
-# 	return {"updated": updated}
+@frappe.whitelist()
+def apply_updates_to_work_item(docname, updates, one_time=False, change_date=None):
+	updates = json.loads(updates)
+	if one_time and change_date:
+		wi_names = _get_work_item(docname, change_date)
+		for name in wi_names:
+			_update_work_item(name, updates)
+	else:
+		_purge_work_item(docname)
+		_update_work_item(docname, updates)
 
 
-# def _get_target_work_items(wi, one_time_change, change_date):
-# 	if cint(one_time_change):
-# 		if not change_date:
-# 			frappe.throw("Change Date is required for one time change.")
-# 		return _get_work_items_for_date(wi, change_date)
+def _get_work_item(docname, change_date=None):
+	query = """
+        SELECT DISTINCT wi.name
+        FROM `tabWork Item` wi
+        INNER JOIN `tabWork Item Log` wil
+            ON wil.parent = wi.name
+            AND wil.parenttype = 'Work Item'
+            AND wil.parentfield = 'activities'
+        WHERE wi.reference_document = %s
+            AND wi.reference_doctype = 'Work Item'
+            AND wi.status != 'Done'
+            AND wi.status != 'Under Review'
+            AND wi.status != 'In Progress'
+            AND wil.action_type = 'Target End Date'
+    """
+	params = [docname]
 
-# 	return _get_open_related_work_items(wi)
+	if change_date:
+		target_dt = get_datetime(change_date)
+		start_dt = target_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+		end_dt = target_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
 
+		query += " AND wil.time BETWEEN %s AND %s"
+		params.extend([start_dt, end_dt])
 
-# def _get_open_related_work_items(wi):
-# 	if wi.reference_doctype == "Work Item" and wi.reference_document:
-# 		root = wi.reference_document
-# 		return frappe.get_all(
-# 			"Work Item",
-# 			filters=[
-# 				["Work Item", "status", "!=", "Done"],
-# 				["Work Item", "name", "in", [root] + _get_child_work_item_names(root)],
-# 			],
-# 			pluck="name",
-# 		)
-
-# 	if wi.reference_doctype and wi.reference_document:
-# 		return frappe.get_all(
-# 			"Work Item",
-# 			filters={
-# 				"reference_doctype": wi.reference_doctype,
-# 				"reference_document": wi.reference_document,
-# 				"status": ["!=", "Done"],
-# 			},
-# 			pluck="name",
-# 		)
-
-# 	return [wi.name] if wi.status != "Done" else []
+	return frappe.db.sql(query, tuple(params))
 
 
-# def _get_work_items_for_date(wi, change_date):
-# 	candidates = _get_open_related_work_items(wi)
-# 	if not candidates:
-# 		return []
+def _update_work_item(item_name, updates):
+	fields_restricted = ["status", "assignee", "reference_document", "reference_doctype", "recurrence_type"]
+	work_item = frappe.get_doc("Work Item", item_name)
+	has_changes = False
 
-# 	rows = frappe.db.sql(
-# 		"""
-# 		SELECT DISTINCT wil.parent
-# 		FROM `tabWork Item Log` wil
-# 		WHERE wil.parenttype = 'Work Item'
-# 			AND wil.parentfield = 'activities'
-# 			AND wil.action_type = 'Target End Date'
-# 			AND DATE(wil.time) = %(change_date)s
-# 			AND wil.parent IN %(candidates)s
-# 		""",
-# 		{"candidates": tuple(candidates), "change_date": change_date},
-# 		as_dict=True,
-# 	)
-# 	return [row.parent for row in rows]
+	for key, value in updates.items():
+		if isinstance(value, list):
+			work_item.set(key, [])
+			for row in value:
+				row = {k: v for k, v in row.items() if k not in ["idx", "name", "__islocal"]}
+				work_item.append(key, row)
+			has_changes = True
 
+		elif key in work_item.as_dict():
+			if work_item.get(key) != value and key not in fields_restricted:
+				work_item.set(key, value)
+				has_changes = True
 
-# def _get_child_work_item_names(root):
-# 	return frappe.get_all(
-# 		"Work Item",
-# 		filters={"reference_doctype": "Work Item", "reference_document": root},
-# 		pluck="name",
-# 	)
+	if has_changes:
+		work_item.save()
+		# sent_noti(work_item.name)
+		if not updates.get("one_time_change"):
+			work_item.after_insert()
 
 
-# def _ensure_dict(value):
-# 	if not value:
-# 		return {}
-# 	if isinstance(value, dict):
-# 		return value
-# 	if isinstance(value, str):
-# 		try:
-# 			parsed = json.loads(value)
-# 			return parsed if isinstance(parsed, dict) else {}
-# 		except Exception:
-# 			return {}
-# 	return {}
+def _purge_work_item(docname):
+	work_items = _get_work_item(docname)
+	for item in work_items:
+		frappe.delete_doc("Work Item", item[0], force=True)

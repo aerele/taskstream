@@ -73,7 +73,7 @@
   },
   {
    "fieldname": "description",
-   "fieldtype": "Text",
+   "fieldtype": "Text Editor",
    "label": "Description"
   },
   {
@@ -159,11 +159,11 @@
    "options": "Month Option"
   },
   {
-   "depends_on": "eval: doc.recurrence_type != 'One Time'",
+   "depends_on": "eval: doc.recurrence_type != 'One Time' && doc.recurrence_type != 'Recurring Instance'",
    "fieldname": "recurrence_time",
    "fieldtype": "Table",
    "label": "Recurrence Time",
-   "mandatory_depends_on": "eval: doc.recurrence_type != 'One Time'",
+   "mandatory_depends_on": "eval: doc.recurrence_type != 'One Time' && doc.recurrence_type != 'Recurring Instance'",
    "options": "Recurrence Time"
   },
   {
@@ -313,7 +313,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-09 16:22:38.442689",
+ "modified": "2026-03-10 00:31:42.330876",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
