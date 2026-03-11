@@ -371,6 +371,11 @@ def _get_nth_weekday(year, month, weekday, occurrence):
 def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	new_wi = frappe.copy_doc(wi_doc)
 	new_wi.name = None
+	new_wi.score = 0
+	new_wi.rework_count = 0
+	new_wi.revision_count = 0
+	new_wi.recurrence_frequency = 0
+	new_wi.percent_completed
 	new_wi.recurrence_type = "Recurring Instance"
 	new_wi.recurrence_date = []
 	new_wi.recurrence_time = []

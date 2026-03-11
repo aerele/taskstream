@@ -42,6 +42,7 @@ def create_permissions():
 	doctype_permissions = {
 		"Month": ["read", "select"],
 		"Weekday": ["read", "select"],
+		"Work Item Configuration": ["read", "select"],
 		"Work Flow Template": ["read", "select", "write", "create", "submit", "cancel"],
 		"Work Item": ["read", "select", "write", "create", "submit", "cancel"],
 		"Work Item Time Extension": ["read", "select", "write", "cancel"],
