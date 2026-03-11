@@ -122,6 +122,7 @@ after_install = "taskstream.patches.install.execute"
 # }
 permission_query_conditions = {
 	"Work Item": "taskstream.taskstream.permission.work_item_user_condition",
+	"Work Item Time Extension": "taskstream.taskstream.permission.work_item_time_extension_user_condition",
 }
 #
 # has_permission = {

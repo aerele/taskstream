@@ -13,6 +13,10 @@ class WorkItemTimeExtension(Document):
 @frappe.whitelist()
 def update_status(docname, status):
 	wit = frappe.get_doc("Work Item Time Extension", docname)
+	if frappe.get_value("Work Item", wit.work_item_reference, "status") == "Done":
+		frappe.db.set_value("Work Item Time Extension", docname, "status", "Rejected")
+		frappe.msgprint("Work Item is already closed")
+		return
 	wit.reviewed_by = frappe.session.user
 	wit.reviewed_on = now_datetime().replace(second=0, microsecond=0)
 	wit.status = status

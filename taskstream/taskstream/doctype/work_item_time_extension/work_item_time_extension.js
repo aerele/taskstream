@@ -11,7 +11,6 @@ frappe.ui.form.on("Work Item Time Extension", {
 			frappe.call({
 				method: "taskstream.taskstream.doctype.work_item_time_extension.work_item_time_extension.update_status",
 				args: {
-					frm: frm.doc,
 					docname: frm.doc.name,
 					status,
 				},
