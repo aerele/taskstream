@@ -313,6 +313,36 @@ frappe.ui.form.on("Work Item", {
 		frm.set_value("score", score);
 	},
 
+	attachment: async function (frm) {
+		let file_url = frm.doc.attachment;
+		if (!file_url) return;
+
+		const r = await frappe.db.get_value("File", { file_url: file_url }, ["name", "file_size"]);
+		const file_doc = r?.message;
+		if (!file_doc) return;
+
+		const max_size = await frappe.db.get_single_value(
+			"Work Item Configuration",
+			"max_file_attachment_size"
+		);
+		const allowed_size = max_size;
+
+		const size_mb = file_doc.file_size / (1024 * 1024);
+
+		if (size_mb > allowed_size) {
+			frappe.call({
+				method: "taskstream.api.delete_file_if_exists",
+				args: {
+					file_name: file_doc.name,
+				},
+				callback: function () {
+					frm.set_value("attachment", "");
+					frappe.msgprint(__(`File must be less than ${allowed_size} MB`));
+				},
+			});
+		}
+	},
+
 	recurrence_type(frm) {
 		update_recurrence_description(frm);
 	},

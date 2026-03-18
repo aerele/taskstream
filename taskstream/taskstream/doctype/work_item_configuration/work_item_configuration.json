@@ -7,6 +7,7 @@
  "field_order": [
   "recurrence_creation_limit",
   "sent_reminder_before",
+  "max_file_attachment_size",
   "column_break_vuwy",
   "max_rework_penalty",
   "max_delay_penalty",
@@ -178,6 +179,15 @@
    "fieldtype": "Int",
    "label": "Max Allowed Rework",
    "non_negative": 1
+  },
+  {
+   "default": "2",
+   "fieldname": "max_file_attachment_size",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Max File Attachment Size",
+   "non_negative": 1,
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
@@ -185,7 +195,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-24 17:34:29.996120",
+ "modified": "2026-03-18 12:41:22.510056",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Configuration",

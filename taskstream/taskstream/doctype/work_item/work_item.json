@@ -15,6 +15,8 @@
   "status",
   "first_mail",
   "percent_completed",
+  "created_on",
+  "attachment",
   "column_break_znmq",
   "work_flow_template",
   "start_date_time",
@@ -95,6 +97,7 @@
    "default": "To Do",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "To Do\nIn Progress\nUnder Review\nDone\nOn Hold\nRework Needed",
    "read_only": 1
@@ -308,12 +311,24 @@
    "fieldname": "percent_completed",
    "fieldtype": "Percent",
    "label": "Percent Completed"
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Date",
+   "label": "Created On",
+   "options": "Today",
+   "read_only": 1
+  },
+  {
+   "fieldname": "attachment",
+   "fieldtype": "Attach",
+   "label": "Attachment"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-10 00:31:42.330876",
+ "modified": "2026-03-18 11:55:33.141229",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
