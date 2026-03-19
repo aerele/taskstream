@@ -11,10 +11,9 @@
   "column_break_uric",
   "work_flow",
   "review_required",
-  "section_break_hffy",
-  "column_break_jssd",
+  "section_break_gnhu",
   "work_flow_template",
-  "column_break_sjpn",
+  "column_break_nvbq",
   "start_date_time",
   "basic_details_section",
   "summary",
@@ -360,11 +359,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "depends_on": "eval: doc.work_flow == 1",
-   "fieldname": "section_break_hffy",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "column_break_uric",
    "fieldtype": "Column Break"
   },
@@ -373,16 +367,8 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "column_break_jssd",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "section_break_kqer",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_sjpn",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "score_tab",
@@ -397,12 +383,20 @@
   {
    "fieldname": "section_break_mlmv",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_gnhu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_nvbq",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-19 14:15:27.339297",
+ "modified": "2026-03-20 00:09:20.587882",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
