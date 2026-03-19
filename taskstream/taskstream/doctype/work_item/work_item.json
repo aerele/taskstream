@@ -7,48 +7,61 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "settings_section",
+  "column_break_uric",
+  "work_flow",
+  "review_required",
+  "section_break_hffy",
+  "column_break_jssd",
+  "work_flow_template",
+  "column_break_sjpn",
+  "start_date_time",
   "basic_details_section",
-  "reporter",
-  "assignee",
-  "requester",
   "summary",
-  "status",
-  "first_mail",
-  "percent_completed",
+  "description",
   "created_on",
   "attachment",
-  "column_break_znmq",
-  "work_flow_template",
-  "start_date_time",
-  "idx",
-  "review_required",
+  "percent_completed",
+  "people_section",
+  "requester",
   "reviewer",
-  "description",
+  "reporter",
+  "assignee",
+  "section_break_fqaa",
+  "column_break_fqlt",
   "reference_doctype",
   "reference_document",
-  "timings_section",
-  "initial_details_column",
-  "activities",
-  "recurrence_score_details_section",
-  "recurrence_details_column",
-  "recurrence_type",
-  "recurrence_frequency",
-  "recurrence_day",
-  "recurrence_month",
-  "monthly_recurrence_based_on",
-  "recurrence_date",
-  "recurrence_day_occurrence",
-  "recurrence_time",
-  "repeat_until",
-  "column_break_fyin",
-  "rework_count",
-  "score",
-  "revision_count",
   "internal_section_section",
   "twenty_percent_reminder_time",
   "twenty_percent_reminder_sent",
   "deadline_reminder_sent",
-  "valid_dates"
+  "idx",
+  "valid_dates",
+  "status",
+  "first_mail",
+  "recurrence_tab",
+  "section_break_kqer",
+  "recurrence_details_column",
+  "recurrence_type",
+  "repeat_until",
+  "column_break_gafj",
+  "recurrence_frequency",
+  "recurrence_day",
+  "monthly_recurrence_based_on",
+  "recurrence_month",
+  "section_break_mlmv",
+  "initial_details_column",
+  "activities",
+  "section_break_lqwq",
+  "recurrence_date",
+  "recurrence_day_occurrence",
+  "recurrence_time",
+  "score_tab",
+  "section_break_yzzw",
+  "column_break_fyin",
+  "rework_count",
+  "score",
+  "revision_count"
  ],
  "fields": [
   {
@@ -97,6 +110,7 @@
    "default": "To Do",
    "fieldname": "status",
    "fieldtype": "Select",
+   "hidden": 1,
    "in_list_view": 1,
    "label": "Status",
    "options": "To Do\nIn Progress\nUnder Review\nDone\nOn Hold\nRework Needed",
@@ -113,14 +127,6 @@
    "fieldname": "basic_details_section",
    "fieldtype": "Section Break",
    "label": "Basic Details"
-  },
-  {
-   "fieldname": "column_break_znmq",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "timings_section",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "initial_details_column",
@@ -144,10 +150,6 @@
    "fieldname": "column_break_fyin",
    "fieldtype": "Column Break",
    "label": "Scoring Details"
-  },
-  {
-   "fieldname": "recurrence_score_details_section",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "recurrence_details_column",
@@ -248,7 +250,6 @@
    "read_only": 1
   },
   {
-   "default": "0",
    "fieldname": "rework_count",
    "fieldtype": "Int",
    "label": "Rework Count",
@@ -256,6 +257,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval: doc.recurrence_type == \"One Time\"",
    "fieldname": "activities",
    "fieldtype": "Table",
    "label": "Activities",
@@ -275,6 +277,7 @@
    "label": "Review Required"
   },
   {
+   "depends_on": "eval: doc.work_flow == 1",
    "fieldname": "work_flow_template",
    "fieldtype": "Link",
    "label": "Work Flow Template",
@@ -323,12 +326,83 @@
    "fieldname": "attachment",
    "fieldtype": "Attach",
    "label": "Attachment"
+  },
+  {
+   "fieldname": "settings_section",
+   "fieldtype": "Section Break",
+   "label": "Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "work_flow",
+   "fieldtype": "Check",
+   "label": "Work Flow"
+  },
+  {
+   "fieldname": "section_break_fqaa",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_fqlt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "people_section",
+   "fieldtype": "Section Break",
+   "label": "People"
+  },
+  {
+   "fieldname": "column_break_gafj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_lqwq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "depends_on": "eval: doc.work_flow == 1",
+   "fieldname": "section_break_hffy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_uric",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_yzzw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_jssd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_kqer",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_sjpn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "score_tab",
+   "fieldtype": "Tab Break",
+   "label": "Score"
+  },
+  {
+   "fieldname": "recurrence_tab",
+   "fieldtype": "Tab Break",
+   "label": "Recurrence"
+  },
+  {
+   "fieldname": "section_break_mlmv",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-18 11:55:33.141229",
+ "modified": "2026-03-19 14:15:27.339297",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

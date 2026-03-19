@@ -10,6 +10,7 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	refresh: function (frm) {
+		setup_two_col_layout(frm);
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
 		const allowed = !(type === "One Time" || type === "Recurring Instance");
@@ -827,4 +828,104 @@ function UpdateWorkItemDetails(frm) {
 		},
 	});
 	d.show();
+}
+
+function setup_two_col_layout(frm) {
+	const SIDEBAR_SECTIONS = ["people_section", "settings_section"];
+	const WRAP_ATTR = "data-wi-wrap";
+
+	// ── helpers ────────────────────────────────────────────────────────────────
+
+	function getActivePane() {
+		const $pane = $(frm.wrapper).find(".tab-pane.show.active, .tab-pane.active").first();
+		return $pane.length ? $pane : null;
+	}
+
+	// Undo a previous applyLayout: move sections back to pane, reset inline styles
+	function teardown() {
+		$(frm.wrapper)
+			.find(`[${WRAP_ATTR}]`)
+			.each(function () {
+				const $wrap = $(this);
+				const $pane = $wrap.closest(".tab-pane.active, .tab-pane.show");
+				$wrap.find(".form-section").each(function () {
+					// Reset every inline style we injected so Frappe's layout is restored
+					$(this).find(".row").css("display", "");
+					$(this).find(".form-column").css({
+						width: "",
+						"max-width": "",
+						float: "",
+						"padding-left": "",
+						"padding-right": "",
+					});
+					($pane.length ? $pane : $wrap.parent()).append(this);
+				});
+				$wrap.remove();
+			});
+	}
+
+	// Force every .form-column inside a section to stretch 100 % wide.
+	// jQuery .css() writes element.style.* (inline styles), which always
+	// outranks any class-based rule including Bootstrap's @media col-sm-* rules.
+	function stackColumns($section) {
+		$section.find(".row").css("display", "block");
+		$section.find(".form-column").css({
+			width: "100%",
+			"max-width": "100%",
+			float: "none",
+			"padding-left": "0",
+			"padding-right": "0",
+		});
+	}
+
+	// ── core ───────────────────────────────────────────────────────────────────
+
+	function applyLayout() {
+		teardown();
+
+		const $pane = getActivePane();
+		if (!$pane) return;
+
+		// Work only with sections that are direct children of this tab pane
+		const $sections = $pane.children(".form-section");
+		const hasSidebar = $sections
+			.toArray()
+			.some((el) => SIDEBAR_SECTIONS.includes($(el).attr("data-fieldname")));
+		if (!hasSidebar) return;
+
+		// All layout geometry lives in inline styles — zero dependency on CSS classes
+		const $wrap = $("<div>").attr(WRAP_ATTR, "1").css({
+			display: "flex",
+			gap: "20px",
+			alignItems: "start",
+		});
+		const $main = $("<div>").css({ flex: "1", minWidth: "0" });
+		const $side = $("<div>").css({ width: "272px", flexShrink: "0" });
+
+		$sections.each(function () {
+			if (SIDEBAR_SECTIONS.includes($(this).attr("data-fieldname"))) {
+				stackColumns($(this));
+				$side.append(this);
+			} else {
+				$main.append(this);
+			}
+		});
+
+		$pane.append($wrap.append($main).append($side));
+	}
+
+	// ── tab-switch wiring (bound once per form lifetime) ───────────────────────
+
+	if (!frm._wi_layout_bound) {
+		frm._wi_layout_bound = true;
+		$(frm.wrapper).on(
+			"shown.bs.tab.wi click.wi",
+			'.nav-tabs .nav-link, a[data-toggle="tab"]',
+			function () {
+				setTimeout(applyLayout, 80);
+			}
+		);
+	}
+
+	setTimeout(applyLayout, 0);
 }
