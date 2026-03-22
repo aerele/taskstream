@@ -9,272 +9,272 @@ frappe.ui.form.on("Work Item", {
 		update_recurrence_description(frm);
 	},
 
-	// refresh: function (frm) {
-	// 	setup_two_col_layout(frm);
-	// 	const { user } = frappe.session;
-	// 	const type = frm.doc.recurrence_type || "One Time";
-	// 	const allowed = !(type === "One Time" || type === "Recurring Instance");
-	// 	//Update Master Recurring Work Item
-	// 	if (allowed && (user === frm.doc.reporter || user === frm.doc.requester)) {
-	// 		frm.add_custom_button(__("Update Recurrence Item"), function () {
-	// 			UpdateWorkItemDetails(frm);
-	// 		});
-	// 	}
-	// 	// Mark Complete button
-	// 	if (
-	// 		(frm.doc.status === "In Progress" && !frm.doc.review_required) ||
-	// 		(frm.doc.status === "Under Review" && user === frm.doc.reviewer)
-	// 	) {
-	// 		frm.add_custom_button(__("Mark Complete"), function () {
-	// 			frappe.confirm(
-	// 				__("Are you sure you want to mark this item as complete?"),
-	// 				function () {
-	// 					frappe.call({
-	// 						method: "taskstream.taskstream.doctype.work_item.work_item.mark_complete",
-	// 						args: { docname: frm.doc.name },
-	// 						callback: function (r) {
-	// 							if (!r.exc) {
-	// 								frappe.msgprint(__("Marked as Done!"));
-	// 								frm.reload_doc();
-	// 							}
-	// 						},
-	// 					});
-	// 				}
-	// 			);
-	// 		});
-	// 	}
-	// 	// Send Notification button
-	// 	if (
-	// 		!frm.doc.first_mail &&
-	// 		!frm.is_dirty() &&
-	// 		frm.doc.status === "To Do" &&
-	// 		(user === frm.doc.reporter || user === frm.doc.requester)
-	// 	) {
-	// 		frm.add_custom_button(__("Sent Mail"), function () {
-	// 			frappe.call({
-	// 				method: "taskstream.taskstream.doctype.work_item.work_item.sent_noti",
-	// 				args: { work_item: frm.doc.name },
-	// 				callback: function (r) {
-	// 					if (!r.exc) {
-	// 						frappe.msgprint(__("Mail Sent!"));
-	// 						frm.reload_doc();
-	// 					}
-	// 				},
-	// 			});
-	// 		});
-	// 	}
-	// 	// Rework button
-	// 	if (frm.doc.status === "Under Review" && frm.doc.reviewer === user) {
-	// 		frm.add_custom_button(__("Rework"), function () {
-	// 			let d = new frappe.ui.Dialog({
-	// 				title: "Rework Work Item",
-	// 				fields: [
-	// 					{
-	// 						label: "Rework Comments",
-	// 						fieldname: "rework_comments",
-	// 						fieldtype: "Small Text",
-	// 						reqd: 1,
-	// 					},
-	// 					{
-	// 						label: "Target End Date",
-	// 						fieldname: "target_end_date",
-	// 						fieldtype: "Datetime",
-	// 					},
-	// 				],
-	// 				primary_action_label: "Submit",
-	// 				primary_action(values) {
-	// 					frappe.call({
-	// 						method: "taskstream.taskstream.doctype.work_item.work_item.resend_for_rework",
-	// 						args: {
-	// 							docname: frm.doc.name,
-	// 							rework_comments: values.rework_comments,
-	// 							target_end_date: values.target_end_date || null,
-	// 						},
-	// 						callback: function (r) {
-	// 							if (!r.exc) {
-	// 								frappe.msgprint(__("Work Item sent for rework!"));
-	// 								frm.reload_doc();
-	// 								d.hide();
-	// 							}
-	// 						},
-	// 					});
-	// 				},
-	// 			});
-	// 			d.show();
-	// 		});
-	// 	}
-	// 	// Start Now Button
-	// 	if (!frm.is_new() && frm.doc.status === "To Do" && frm.doc.assignee === user) {
-	// 		frm.add_custom_button(__("Start Now"), function () {
-	// 			frappe.call({
-	// 				method: "taskstream.taskstream.doctype.work_item.work_item.start_now",
-	// 				args: { docname: frm.doc.name },
-	// 				callback: function (r) {
-	// 					if (!r.exc) {
-	// 						frappe.msgprint(__("Work Item started!"));
-	// 						frm.reload_doc();
-	// 					}
-	// 				},
-	// 			});
-	// 		});
-	// 	}
-	// 	//Hold Button
-	// 	if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
-	// 		frm.add_custom_button(__("Hold"), function () {
-	// 			frappe.db.set_value("Work Item", frm.doc.name, "status", "On Hold").then(() => {
-	// 				frappe.msgprint(__("Work Item put on hold!"));
-	// 				frm.reload_doc();
-	// 			});
-	// 		});
-	// 	}
-	// 	//Resume Button
-	// 	if (frm.doc.status === "On Hold" && frm.doc.assignee === user) {
-	// 		frm.add_custom_button(__("Resume"), function () {
-	// 			frappe.db
-	// 				.set_value("Work Item", frm.doc.name, "status", "In Progress")
-	// 				.then(() => {
-	// 					frappe.msgprint(__("Work Item resumed!"));
-	// 					frm.reload_doc();
-	// 				});
-	// 		});
-	// 	}
-	// 	// Send for Review button
-	// 	if (!frm.is_new() && ["In Progress", "Under Review"].includes(frm.doc.status)) {
-	// 		const iscritical = frm.doc.review_required;
+	refresh: function (frm) {
+		setup_two_col_layout(frm);
+		const { user } = frappe.session;
+		const type = frm.doc.recurrence_type || "One Time";
+		const allowed = !(type === "One Time" || type === "Recurring Instance");
+		//Update Master Recurring Work Item
+		if (allowed && (user === frm.doc.reporter || user === frm.doc.requester)) {
+			frm.add_custom_button(__("Update Recurrence Item"), function () {
+				UpdateWorkItemDetails(frm);
+			});
+		}
+		// Mark Complete button
+		if (
+			(frm.doc.status === "In Progress" && !frm.doc.review_required) ||
+			(frm.doc.status === "Under Review" && user === frm.doc.reviewer)
+		) {
+			frm.add_custom_button(__("Mark Complete"), function () {
+				frappe.confirm(
+					__("Are you sure you want to mark this item as complete?"),
+					function () {
+						frappe.call({
+							method: "taskstream.taskstream.doctype.work_item.work_item.mark_complete",
+							args: { docname: frm.doc.name },
+							callback: function (r) {
+								if (!r.exc) {
+									frappe.msgprint(__("Marked as Done!"));
+									frm.reload_doc();
+								}
+							},
+						});
+					}
+				);
+			});
+		}
+		// Send Notification button
+		if (
+			!frm.doc.first_mail &&
+			!frm.is_dirty() &&
+			frm.doc.status === "To Do" &&
+			(user === frm.doc.reporter || user === frm.doc.requester)
+		) {
+			frm.add_custom_button(__("Sent Mail"), function () {
+				frappe.call({
+					method: "taskstream.taskstream.doctype.work_item.work_item.sent_noti",
+					args: { work_item: frm.doc.name },
+					callback: function (r) {
+						if (!r.exc) {
+							frappe.msgprint(__("Mail Sent!"));
+							frm.reload_doc();
+						}
+					},
+				});
+			});
+		}
+		// Rework button
+		if (frm.doc.status === "Under Review" && frm.doc.reviewer === user) {
+			frm.add_custom_button(__("Rework"), function () {
+				let d = new frappe.ui.Dialog({
+					title: "Rework Work Item",
+					fields: [
+						{
+							label: "Rework Comments",
+							fieldname: "rework_comments",
+							fieldtype: "Small Text",
+							reqd: 1,
+						},
+						{
+							label: "Target End Date",
+							fieldname: "target_end_date",
+							fieldtype: "Datetime",
+						},
+					],
+					primary_action_label: "Submit",
+					primary_action(values) {
+						frappe.call({
+							method: "taskstream.taskstream.doctype.work_item.work_item.resend_for_rework",
+							args: {
+								docname: frm.doc.name,
+								rework_comments: values.rework_comments,
+								target_end_date: values.target_end_date || null,
+							},
+							callback: function (r) {
+								if (!r.exc) {
+									frappe.msgprint(__("Work Item sent for rework!"));
+									frm.reload_doc();
+									d.hide();
+								}
+							},
+						});
+					},
+				});
+				d.show();
+			});
+		}
+		// Start Now Button
+		if (!frm.is_new() && frm.doc.status === "To Do" && frm.doc.assignee === user) {
+			frm.add_custom_button(__("Start Now"), function () {
+				frappe.call({
+					method: "taskstream.taskstream.doctype.work_item.work_item.start_now",
+					args: { docname: frm.doc.name },
+					callback: function (r) {
+						if (!r.exc) {
+							frappe.msgprint(__("Work Item started!"));
+							frm.reload_doc();
+						}
+					},
+				});
+			});
+		}
+		//Hold Button
+		if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
+			frm.add_custom_button(__("Hold"), function () {
+				frappe.db.set_value("Work Item", frm.doc.name, "status", "On Hold").then(() => {
+					frappe.msgprint(__("Work Item put on hold!"));
+					frm.reload_doc();
+				});
+			});
+		}
+		//Resume Button
+		if (frm.doc.status === "On Hold" && frm.doc.assignee === user) {
+			frm.add_custom_button(__("Resume"), function () {
+				frappe.db
+					.set_value("Work Item", frm.doc.name, "status", "In Progress")
+					.then(() => {
+						frappe.msgprint(__("Work Item resumed!"));
+						frm.reload_doc();
+					});
+			});
+		}
+		// Send for Review button
+		if (!frm.is_new() && ["In Progress", "Under Review"].includes(frm.doc.status)) {
+			const iscritical = frm.doc.review_required;
 
-	// 		if (iscritical && user === frm.doc.assignee && frm.doc.status == "In Progress") {
-	// 			frm.add_custom_button(__("Send for Review"), function () {
-	// 				frappe.call({
-	// 					method: "taskstream.taskstream.doctype.work_item.work_item.send_for_review",
-	// 					args: {
-	// 						docname: frm.doc.name,
-	// 						reviewer: frm.doc.reviewer,
-	// 					},
-	// 					callback: function (r) {
-	// 						if (!r.exc) {
-	// 							frappe.msgprint(__("Sent for review!"));
-	// 							frm.reload_doc();
-	// 						}
-	// 					},
-	// 				});
-	// 			});
-	// 		}
-	// 	}
-	// 	//Time extension button
-	// 	if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
-	// 		frm.add_custom_button(__("Request Time Extension"), function () {
-	// 			let d = new frappe.ui.Dialog({
-	// 				title: "Request Time Extension",
-	// 				fields: [
-	// 					{
-	// 						label: "Requested Target Date and Time",
-	// 						fieldname: "req_target_date_time",
-	// 						fieldtype: "Datetime",
-	// 						reqd: 1,
-	// 					},
-	// 					{
-	// 						label: "Reason",
-	// 						fieldname: "reason",
-	// 						fieldtype: "Small Text",
-	// 						reqd: 1,
-	// 					},
-	// 				],
-	// 				primary_action_label: "Submit",
-	// 				primary_action(values) {
-	// 					frappe.call({
-	// 						method: "taskstream.taskstream.doctype.work_item.work_item.time_extension_request",
-	// 						args: {
-	// 							doc: frm.doc.name,
-	// 							reason: values.reason,
-	// 							req_target_date_time: values.req_target_date_time,
-	// 						},
-	// 						callback: function (r) {
-	// 							if (!r.exc) {
-	// 								frm.reload_doc();
-	// 								d.hide();
-	// 							}
-	// 						},
-	// 					});
-	// 				},
-	// 			});
-	// 			d.show();
-	// 		});
-	// 	}
-	// 	// Set Read Only for non reporter and non requester
-	// 	if (
-	// 		!frm.is_new() &&
-	// 		(frm.doc.first_mail == 1 || (user !== frm.doc.reporter && user !== frm.doc.requester))
-	// 	) {
-	// 		const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
-	// 		fieldnames.forEach((field) => {
-	// 			if (field != "percent_completed") {
-	// 				frm.set_df_property(field, "read_only", 1);
-	// 			}
-	// 		});
-	// 	}
-	// 	//Update Recurrence Type options
-	// 	if (frm.doc.recurrence_type != "Recurring Instance") {
-	// 		const options = "One Time\nDaily\nWeekly\nMonthly\nYearly";
-	// 		frm.set_df_property("recurrence_type", "options", options);
-	// 		frm.refresh_field("recurrence_type");
-	// 	}
-	// 	//Reassignment
-	// 	const approved_users_for_reassignment = [
-	// 		frm.doc.assignee,
-	// 		frm.doc.reporter,
-	// 		frm.doc.requester,
-	// 	];
-	// 	if (frm.doc.status === "In Progress" && approved_users_for_reassignment.includes(user)) {
-	// 		frm.add_custom_button(__("Reassign"), function () {
-	// 			let d = new frappe.ui.Dialog({
-	// 				title: "Reassignment",
-	// 				fields: [
-	// 					{
-	// 						label: "Current Assignee",
-	// 						fieldname: "current_assignee",
-	// 						fieldtype: "Link",
-	// 						options: "User",
-	// 						read_only: 1,
-	// 						default: frm.doc.assignee,
-	// 					},
-	// 					{
-	// 						label: "Assign To",
-	// 						fieldname: "new_assignee",
-	// 						fieldtype: "Link",
-	// 						options: "User",
-	// 						reqd: 1,
-	// 					},
-	// 					{
-	// 						label: "Reason/Remarks",
-	// 						fieldname: "reason",
-	// 						fieldtype: "Small Text",
-	// 						reqd: 1,
-	// 					},
-	// 				],
-	// 				primary_action_label: "Submit",
-	// 				primary_action(values) {
-	// 					frappe.call({
-	// 						method: "taskstream.taskstream.doctype.work_item.work_item.reassign",
-	// 						args: {
-	// 							wi: frm.doc.name,
-	// 							new_assignee: values.new_assignee,
-	// 							current_assignee: values.current_assignee,
-	// 							reason: values.reason,
-	// 						},
-	// 						callback: function (r) {
-	// 							if (!r.exc) {
-	// 								frm.reload_doc();
-	// 								d.hide();
-	// 							}
-	// 						},
-	// 					});
-	// 					d.hide();
-	// 				},
-	// 			});
-	// 			d.show();
-	// 		});
-	// 	}
-	// },
+			if (iscritical && user === frm.doc.assignee && frm.doc.status == "In Progress") {
+				frm.add_custom_button(__("Send for Review"), function () {
+					frappe.call({
+						method: "taskstream.taskstream.doctype.work_item.work_item.send_for_review",
+						args: {
+							docname: frm.doc.name,
+							reviewer: frm.doc.reviewer,
+						},
+						callback: function (r) {
+							if (!r.exc) {
+								frappe.msgprint(__("Sent for review!"));
+								frm.reload_doc();
+							}
+						},
+					});
+				});
+			}
+		}
+		//Time extension button
+		if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
+			frm.add_custom_button(__("Request Time Extension"), function () {
+				let d = new frappe.ui.Dialog({
+					title: "Request Time Extension",
+					fields: [
+						{
+							label: "Requested Target Date and Time",
+							fieldname: "req_target_date_time",
+							fieldtype: "Datetime",
+							reqd: 1,
+						},
+						{
+							label: "Reason",
+							fieldname: "reason",
+							fieldtype: "Small Text",
+							reqd: 1,
+						},
+					],
+					primary_action_label: "Submit",
+					primary_action(values) {
+						frappe.call({
+							method: "taskstream.taskstream.doctype.work_item.work_item.time_extension_request",
+							args: {
+								doc: frm.doc.name,
+								reason: values.reason,
+								req_target_date_time: values.req_target_date_time,
+							},
+							callback: function (r) {
+								if (!r.exc) {
+									frm.reload_doc();
+									d.hide();
+								}
+							},
+						});
+					},
+				});
+				d.show();
+			});
+		}
+		// Set Read Only for non reporter and non requester
+		if (
+			!frm.is_new() &&
+			(frm.doc.first_mail == 1 || (user !== frm.doc.reporter && user !== frm.doc.requester))
+		) {
+			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
+			fieldnames.forEach((field) => {
+				if (field != "percent_completed") {
+					frm.set_df_property(field, "read_only", 1);
+				}
+			});
+		}
+		//Update Recurrence Type options
+		if (frm.doc.recurrence_type != "Recurring Instance") {
+			const options = "One Time\nDaily\nWeekly\nMonthly\nYearly";
+			frm.set_df_property("recurrence_type", "options", options);
+			frm.refresh_field("recurrence_type");
+		}
+		//Reassignment
+		const approved_users_for_reassignment = [
+			frm.doc.assignee,
+			frm.doc.reporter,
+			frm.doc.requester,
+		];
+		if (frm.doc.status === "In Progress" && approved_users_for_reassignment.includes(user)) {
+			frm.add_custom_button(__("Reassign"), function () {
+				let d = new frappe.ui.Dialog({
+					title: "Reassignment",
+					fields: [
+						{
+							label: "Current Assignee",
+							fieldname: "current_assignee",
+							fieldtype: "Link",
+							options: "User",
+							read_only: 1,
+							default: frm.doc.assignee,
+						},
+						{
+							label: "Assign To",
+							fieldname: "new_assignee",
+							fieldtype: "Link",
+							options: "User",
+							reqd: 1,
+						},
+						{
+							label: "Reason/Remarks",
+							fieldname: "reason",
+							fieldtype: "Small Text",
+							reqd: 1,
+						},
+					],
+					primary_action_label: "Submit",
+					primary_action(values) {
+						frappe.call({
+							method: "taskstream.taskstream.doctype.work_item.work_item.reassign",
+							args: {
+								wi: frm.doc.name,
+								new_assignee: values.new_assignee,
+								current_assignee: values.current_assignee,
+								reason: values.reason,
+							},
+							callback: function (r) {
+								if (!r.exc) {
+									frm.reload_doc();
+									d.hide();
+								}
+							},
+						});
+						d.hide();
+					},
+				});
+				d.show();
+			});
+		}
+	},
 
 	validate: function (frm) {
 		update_recurrence_description(frm);
@@ -868,13 +868,23 @@ function setup_two_col_layout(frm) {
 	// jQuery .css() writes element.style.* (inline styles), which always
 	// outranks any class-based rule including Bootstrap's @media col-sm-* rules.
 	function stackColumns($section) {
-		$section.find(".row").css("display", "block");
-		$section.find(".form-column").css({
-			width: "100%",
-			"max-width": "100%",
-			float: "none",
-			"padding-left": "0",
-			"padding-right": "0",
+		// Force all Bootstrap / Frappe column layouts to full width.
+		// Use style.setProperty with "important" so inline styles win over
+		// Bootstrap col-sm-* and Frappe form-layout-flex regardless of specificity.
+		$section.find(".row, .form-layout-flex").css({ display: "block" });
+		$section.find(".form-column, [class*='col-']").each(function () {
+			this.style.setProperty("width", "100%", "important");
+			this.style.setProperty("max-width", "100%", "important");
+			this.style.setProperty("flex", "0 0 100%", "important");
+			this.style.setProperty("float", "none", "important");
+			this.style.setProperty("padding-left", "0", "important");
+			this.style.setProperty("padding-right", "0", "important");
+		});
+		// Also remove Frappe's input-max-width cap and awesomplete width constraint
+		// which limit individual controls regardless of their container width.
+		$section.find(".frappe-control, .input-max-width, .awesomplete, .control-input-wrapper, .control-input").each(function () {
+			this.style.setProperty("max-width", "100%", "important");
+			this.style.setProperty("width", "100%", "important");
 		});
 	}
 
@@ -896,11 +906,12 @@ function setup_two_col_layout(frm) {
 		// All layout geometry lives in inline styles — zero dependency on CSS classes
 		const $wrap = $("<div>").attr(WRAP_ATTR, "1").css({
 			display: "flex",
+			flexWrap: "wrap",
 			gap: "20px",
 			alignItems: "start",
 		});
-		const $main = $("<div>").css({ flex: "1", minWidth: "0" });
-		const $side = $("<div>").css({ width: "272px", flexShrink: "0" });
+		const $main = $("<div>").css({ flex: "1 1 55%", minWidth: "320px" });
+		const $side = $("<div>").css({ flex: "1 1 300px", minWidth: "300px", maxWidth: "360px" });
 
 		$sections.each(function () {
 			if (SIDEBAR_SECTIONS.includes($(this).attr("data-fieldname"))) {

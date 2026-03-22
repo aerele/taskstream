@@ -1,6 +1,6 @@
 @charset "UTF-8";
 
-/* ../../../../../tmp/tmp-39883-UdtieLWebhB3/taskstream/taskstream/public/scss/taskstream.bundle.css */
+/* ../../../../../tmp/tmp-52389-fY0ikAzukZoF/taskstream/taskstream/public/scss/taskstream.bundle.css */
 .wi-lsec {
   background: #fff;
   border: 1px solid #e2e6ea;
@@ -86,16 +86,16 @@
   background: #fafafa;
 }
 .as-ip {
-  background: linear-gradient(-90deg, #eff8ff 0%, #fff 65%);
+  background: linear-gradient(90deg, #eff8ff 0%, #fff 65%);
 }
 .as-review {
-  background: linear-gradient(-90deg, #f5f3ff 0%, #fff 65%);
+  background: linear-gradient(90deg, #f5f3ff 0%, #fff 65%);
 }
 .as-hold {
-  background: linear-gradient(-90deg, #fef9ec 0%, #fff 65%);
+  background: linear-gradient(90deg, #fef9ec 0%, #fff 65%);
 }
 .as-done {
-  background: linear-gradient(-90deg, #f0fdf4 0%, #fff 65%);
+  background: linear-gradient(90deg, #f0fdf4 0%, #fff 65%);
 }
 .wi-ring-outer {
   position: relative;
@@ -190,4 +190,41 @@
   font-style: italic;
   margin-bottom: 14px;
 }
-/*# sourceMappingURL=taskstream.bundle.5TWJUWHD.css.map */
+.form-section[data-fieldname=settings_section] .frappe-control,
+.form-section[data-fieldname=settings_section] .input-max-width,
+.form-section[data-fieldname=settings_section] .awesomplete,
+.form-section[data-fieldname=settings_section] .control-input-wrapper,
+.form-section[data-fieldname=settings_section] .control-input,
+.form-section[data-fieldname=settings_section] .link-field,
+.form-section[data-fieldname=people_section] .frappe-control,
+.form-section[data-fieldname=people_section] .input-max-width,
+.form-section[data-fieldname=people_section] .awesomplete,
+.form-section[data-fieldname=people_section] .control-input-wrapper,
+.form-section[data-fieldname=people_section] .control-input,
+.form-section[data-fieldname=people_section] .link-field {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+.form-section[data-fieldname=settings_section] input.form-control,
+.form-section[data-fieldname=settings_section] input[type=text],
+.form-section[data-fieldname=settings_section] select.form-control,
+.form-section[data-fieldname=settings_section] textarea.form-control,
+.form-section[data-fieldname=people_section] input.form-control,
+.form-section[data-fieldname=people_section] input[type=text],
+.form-section[data-fieldname=people_section] select.form-control,
+.form-section[data-fieldname=people_section] textarea.form-control {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+.form-section[data-fieldname=settings_section] .form-column,
+.form-section[data-fieldname=settings_section] [class*=col-],
+.form-section[data-fieldname=people_section] .form-column,
+.form-section[data-fieldname=people_section] [class*=col-] {
+  max-width: 100% !important;
+  width: 100% !important;
+  flex: 0 0 100% !important;
+  float: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+/*# sourceMappingURL=taskstream.bundle.U3744TVQ.css.map */

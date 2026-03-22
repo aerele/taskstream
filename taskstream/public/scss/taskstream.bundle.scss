@@ -92,3 +92,37 @@
   font-size: 12.5px; color: #1e40af; font-style: italic;
   margin-bottom: 14px;
 }
+/* ── Sidebar sections: full-width controls ────────────────────────────────────
+   Frappe's .input-max-width caps controls at --input-max-width (~400px).
+   Override it inside our sidebar sections so every control fills the panel.
+   ─────────────────────────────────────────────────────────────────────────── */
+.form-section[data-fieldname="settings_section"],
+.form-section[data-fieldname="people_section"] {
+  .frappe-control,
+  .input-max-width,
+  .awesomplete,
+  .control-input-wrapper,
+  .control-input,
+  .link-field {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  input.form-control,
+  input[type="text"],
+  select.form-control,
+  textarea.form-control {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .form-column,
+  [class*="col-"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    float: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
