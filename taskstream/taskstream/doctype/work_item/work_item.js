@@ -207,7 +207,7 @@ frappe.ui.form.on("Work Item", {
 		) {
 			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
 			fieldnames.forEach((field) => {
-				if (field != "percent_completed") {
+				if (field != "benefit_of_work_done") {
 					frm.set_df_property(field, "read_only", 1);
 				}
 			});
@@ -303,14 +303,14 @@ frappe.ui.form.on("Work Item", {
 		}
 	},
 
-	percent_completed: async function (frm) {
+	benefit_of_work_done: async function (frm) {
 		const completion_score = await frappe.db.get_single_value(
 			"Work Item Configuration",
 			"completion_score"
 		);
 		const considerable_score = flt(completion_score) / 2;
-		const { percent_completed } = frm.doc;
-		const score = (flt(percent_completed) / 100) * considerable_score;
+		const { benefit_of_work_done } = frm.doc;
+		const score = (flt(benefit_of_work_done) / 100) * considerable_score;
 		frm.set_value("score", score);
 	},
 
@@ -423,6 +423,25 @@ frappe.ui.form.on("Recurrence Time", {
 		update_recurrence_description(frm);
 	},
 });
+
+frappe.ui.form.on("Work Item Log", {
+	activities_add: function (frm, cdt, cdn) {
+		apply_default_activity_time(cdt, cdn);
+	},
+	time: function (frm, cdt, cdn) {
+		apply_default_activity_time(cdt, cdn);
+	},
+});
+
+function apply_default_activity_time(cdt, cdn) {
+	const row = locals[cdt][cdn];
+	if (!row || row.time) return;
+
+	const today = frappe.datetime.get_today();
+	const default_time = `${today} 23:59:59`;
+
+	frappe.model.set_value(cdt, cdn, "time", default_time);
+}
 
 frappe.ui.form.on("Recurrence Day Occurrence", {
 	weekday: function (frm, cdt, cdn) {
@@ -882,10 +901,14 @@ function setup_two_col_layout(frm) {
 		});
 		// Also remove Frappe's input-max-width cap and awesomplete width constraint
 		// which limit individual controls regardless of their container width.
-		$section.find(".frappe-control, .input-max-width, .awesomplete, .control-input-wrapper, .control-input").each(function () {
-			this.style.setProperty("max-width", "100%", "important");
-			this.style.setProperty("width", "100%", "important");
-		});
+		$section
+			.find(
+				".frappe-control, .input-max-width, .awesomplete, .control-input-wrapper, .control-input"
+			)
+			.each(function () {
+				this.style.setProperty("max-width", "100%", "important");
+				this.style.setProperty("width", "100%", "important");
+			});
 	}
 
 	// ── core ───────────────────────────────────────────────────────────────────

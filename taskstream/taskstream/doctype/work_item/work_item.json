@@ -19,7 +19,7 @@
   "description",
   "created_on",
   "attachment",
-  "percent_completed",
+  "benefit_of_work_done",
   "people_section",
   "requester",
   "reviewer",
@@ -379,12 +379,18 @@
   {
    "fieldname": "column_break_nvbq",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.status == \"In Progress\"",
+   "fieldname": "benefit_of_work_done",
+   "fieldtype": "Percent",
+   "label": "Benefit of Work Done (%)"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 00:09:20.587882",
+ "modified": "2026-03-24 10:49:55.738623",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

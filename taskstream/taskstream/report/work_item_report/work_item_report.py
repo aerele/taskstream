@@ -73,7 +73,7 @@ def get_data(filters=None):
 			work_item.status,
 			work_item.reference_document,
 			work_item.reference_doctype,
-			work_item.percent_completed,
+			work_item.benefit_of_work_done,
 			target_subquery.target_date,
 			actual_subquery.actual_end,
 		)
@@ -99,7 +99,7 @@ def get_data(filters=None):
 		anchor_time = actual_end if (row.get("status") == "Done" and actual_end) else now
 		delay_days = (anchor_time - target_date).days if anchor_time > target_date else 0
 
-		completion_percentage = 100 if row.get("status") == "Done" else (row.get("percent_completed") or 0)
+		completion_percentage = 100 if row.get("status") == "Done" else (row.get("benefit_of_work_done") or 0)
 		reference = row.get("reference_document") if row.get("reference_doctype") == "Work Item" else None
 
 		results.append(
