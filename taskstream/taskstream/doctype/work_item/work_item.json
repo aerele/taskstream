@@ -369,25 +369,24 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.status == \"In Progress\"",
-   "fieldname": "benefit_of_work_done",
-   "fieldtype": "Percent",
-   "label": "Benefit of Work Done (%)"
-  },
-  {
    "fieldname": "section_break_pyzl",
    "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_cswc",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "benefit_of_work_done",
+   "fieldtype": "Percent",
+   "label": "Benefit of Work Done (%)"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-26 12:43:26.240781",
+ "modified": "2026-03-26 17:00:04.722140",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

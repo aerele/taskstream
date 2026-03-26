@@ -25,7 +25,9 @@ frappe.ui.form.on("Work Item", {
 			(frm.doc.status === "In Progress" &&
 				!frm.doc.review_required &&
 				user === frm.doc.assignee) ||
-			(frm.doc.status === "Under Review" && user === frm.doc.reviewer)
+			(frm.doc.status === "Under Review" &&
+				user === frm.doc.reviewer &&
+				frm.doc.benefit_of_work_done > 0)
 		) {
 			frm.add_custom_button(__("Mark Complete"), function () {
 				frappe.confirm(
@@ -209,9 +211,7 @@ frappe.ui.form.on("Work Item", {
 		) {
 			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
 			fieldnames.forEach((field) => {
-				if (field != "benefit_of_work_done") {
-					frm.set_df_property(field, "read_only", 1);
-				}
+				frm.set_df_property(field, "read_only", 1);
 			});
 		}
 		//Update Recurrence Type options
@@ -274,6 +274,23 @@ frappe.ui.form.on("Work Item", {
 				});
 				d.show();
 			});
+		}
+		//edit-able condition for benefit_of_work_done
+		if (frm.doc.review_required && user === frm.doc.reviewer) {
+			frm.set_df_property("benefit_of_work_done", "read_only", 0);
+		} else if (
+			!frm.doc.review_required &&
+			(user === frm.doc.reporter || user === frm.doc.requester)
+		) {
+			frm.set_df_property("benefit_of_work_done", "read_only", 0);
+		} else {
+			frm.set_df_property("benefit_of_work_done", "read_only", 1);
+		}
+		//if status != Done, then score label should be Provisional Score
+		if (frm.doc.status != "Done") {
+			frm.set_df_property("score", "label", "Provisional Score");
+		} else {
+			frm.set_df_property("score", "label", "Score");
 		}
 	},
 
