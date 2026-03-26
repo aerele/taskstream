@@ -22,7 +22,9 @@ frappe.ui.form.on("Work Item", {
 		}
 		// Mark Complete button
 		if (
-			(frm.doc.status === "In Progress" && !frm.doc.review_required) ||
+			(frm.doc.status === "In Progress" &&
+				!frm.doc.review_required &&
+				user === frm.doc.assignee) ||
 			(frm.doc.status === "Under Review" && user === frm.doc.reviewer)
 		) {
 			frm.add_custom_button(__("Mark Complete"), function () {
@@ -263,8 +265,7 @@ frappe.ui.form.on("Work Item", {
 							},
 							callback: function (r) {
 								if (!r.exc) {
-									frm.reload_doc();
-									d.hide();
+									frappe.set_route("List", "Work Item");
 								}
 							},
 						});

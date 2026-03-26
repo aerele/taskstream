@@ -25,9 +25,9 @@
   "reviewer",
   "reporter",
   "assignee",
-  "section_break_fqaa",
-  "column_break_fqlt",
+  "section_break_pyzl",
   "reference_doctype",
+  "column_break_cswc",
   "reference_document",
   "internal_section_section",
   "twenty_percent_reminder_time",
@@ -42,7 +42,6 @@
   "recurrence_details_column",
   "recurrence_type",
   "repeat_until",
-  "column_break_gafj",
   "recurrence_frequency",
   "recurrence_day",
   "monthly_recurrence_based_on",
@@ -174,7 +173,7 @@
   },
   {
    "default": "1",
-   "depends_on": "eval: !['One Time', 'Daily'].includes(doc.recurrence_type)",
+   "depends_on": "eval: !['One Time', 'Recurring Instance', 'Daily'].includes(doc.recurrence_type)",
    "fieldname": "recurrence_frequency",
    "fieldtype": "Int",
    "label": "Recurrence Frequency",
@@ -217,7 +216,7 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval: doc.recurrence_type == \"One Time\"",
+   "depends_on": "eval: doc.recurrence_type == \"One Time\" || doc.recurrence_type == \"Recurring Instance\"",
    "fieldname": "activities",
    "fieldtype": "Table",
    "label": "Activities",
@@ -346,22 +345,11 @@
    "label": "Score"
   },
   {
-   "fieldname": "section_break_score_details",
-   "fieldtype": "Section Break",
-   "label": "Score Details"
-  },
-  {
    "fieldname": "score",
    "fieldtype": "Float",
    "label": "Score",
    "precision": "2",
    "read_only": 1
-  },
-  {
-   "depends_on": "eval:doc.status == \"In Progress\"",
-   "fieldname": "percent_completed",
-   "fieldtype": "Percent",
-   "label": "Percent Completed"
   },
   {
    "fieldname": "recurrence_tab",
@@ -385,12 +373,21 @@
    "fieldname": "benefit_of_work_done",
    "fieldtype": "Percent",
    "label": "Benefit of Work Done (%)"
+  },
+  {
+   "fieldname": "section_break_pyzl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_cswc",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
+ "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-24 10:49:55.738623",
+ "modified": "2026-03-26 12:43:26.240781",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
