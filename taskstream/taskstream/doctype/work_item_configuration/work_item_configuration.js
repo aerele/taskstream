@@ -30,4 +30,7 @@ frappe.ui.form.on("Work Item Configuration", {
 			);
 		}
 	},
+	penalty_points_per_day: function (frm) {
+		frm.set_value("penalty_per_minute", frm.doc.penalty_points_per_day / 1440);
+	},
 });
