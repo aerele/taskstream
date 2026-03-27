@@ -17,7 +17,6 @@
   "basic_details_section",
   "summary",
   "description",
-  "created_on",
   "attachment",
   "benefit_of_work_done",
   "people_section",
@@ -46,6 +45,9 @@
   "recurrence_day",
   "monthly_recurrence_based_on",
   "recurrence_month",
+  "column_break_ekrr",
+  "created_on",
+  "target_end_date",
   "section_break_mlmv",
   "initial_details_column",
   "activities",
@@ -380,13 +382,24 @@
    "fieldname": "benefit_of_work_done",
    "fieldtype": "Percent",
    "label": "Benefit of Work Done (%)"
+  },
+  {
+   "depends_on": "eval: doc.recurrence_type == \"One Time\" || doc.recurrence_type == \"Recurring Instance\"",
+   "fieldname": "target_end_date",
+   "fieldtype": "Datetime",
+   "label": "Target End Date",
+   "mandatory_depends_on": "eval: doc.recurrence_type == \"One Time\" || doc.recurrence_type == \"Recurring Instance\""
+  },
+  {
+   "fieldname": "column_break_ekrr",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-26 17:00:04.722140",
+ "modified": "2026-03-27 16:22:48.397544",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

@@ -645,20 +645,22 @@ function set_target_end_date_time(frm) {
 		},
 		callback: function (r) {
 			if (!r.exc && r.message) {
-				let first_activity = (frm.doc.activities || [])[0];
+				// let first_activity = (frm.doc.activities || [])[0];
 
-				if (!first_activity) {
-					first_activity = frm.add_child("activities");
-					first_activity.action_type = "Target End Date";
-				}
+				// if (!first_activity) {
+				// 	first_activity = frm.add_child("activities");
+				// 	first_activity.action_type = "Target End Date";
+				// }
 
-				frappe.model.set_value(
-					first_activity.doctype,
-					first_activity.name,
-					"time",
-					r.message
-				);
-				frm.refresh_field("activities");
+				// frappe.model.set_value(
+				// 	first_activity.doctype,
+				// 	first_activity.name,
+				// 	"time",
+				// 	r.message
+				// );
+				// frm.refresh_field("activities");
+
+				frm.set_value("target_end_date", r.message);
 			}
 		},
 	});

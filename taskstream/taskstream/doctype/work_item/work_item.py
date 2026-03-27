@@ -16,7 +16,9 @@ class WorkItem(Document):
 		if not self.created_on:
 			self.created_on = now_datetime().date()
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
-			planned_end_exists = any(row.action_type == "Target End Date" for row in self.activities)
+			planned_end_exists = (
+				self.target_end_date
+			)  # any(row.action_type == "Target End Date" for row in self.activities)
 			if not planned_end_exists:
 				frappe.throw("Activities must include one 'Target End Date' entry.")
 
@@ -46,14 +48,19 @@ class WorkItem(Document):
 			(datetime.fromisoformat(d["date"]).date(), timedelta(seconds=d["time_seconds"]))
 			for d in valid_dates
 		]
-		current_slot = None
-		for rows in self.activities:
-			if rows.action_type == "Target End Date":
-				date_time = rows.time
-				date = date_time.date()
-				t = date_time.time()
-				target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
-				current_slot = (date, target_time)
+		# current_slot = None
+		# for rows in self.activities:
+		# 	if rows.action_type == "Target End Date":
+		# 		date_time = rows.time
+		# 		date = date_time.date()
+		# 		t = date_time.time()
+		# 		target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+		# 		current_slot = (date, target_time)
+
+		date = self.target_end_date.date()
+		t = self.target_end_date.time()
+		target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+		current_slot = (date, target_time)
 
 		if current_slot and current_slot in valid_dates:
 			current_index = valid_dates.index(current_slot)
@@ -64,17 +71,12 @@ class WorkItem(Document):
 						"""
 						SELECT 1
 						FROM `tabWork Item` wi
-						INNER JOIN `tabWork Item Log` wil
-							ON wil.parent = wi.name
-							AND wil.parenttype = 'Work Item'
-							AND wil.parentfield = 'activities'
 						WHERE wi.reference_document = %s
 							AND wi.reference_doctype = %s
 							AND wi.summary = %s
 							AND wi.description = %s
 							AND wi.rework_count = 0
-							AND wil.action_type = 'Target End Date'
-							AND wil.time = %s
+							AND wi.target_end_date = %s
 						LIMIT 1
 						""",
 						(
@@ -391,13 +393,14 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 		except (ValueError, TypeError):
 			time_delta = timedelta(hours=0)
 
-	new_wi.append(
-		"activities",
-		{
-			"action_type": "Target End Date",
-			"time": datetime.combine(date, datetime.min.time()) + time_delta,
-		},
-	)
+	# new_wi.append(
+	# 	"activities",
+	# 	{
+	# 		"action_type": "Target End Date",
+	# 		"time": datetime.combine(date, datetime.min.time()) + time_delta,
+	# 	},
+	# )
+	new_wi.target_end_date = datetime.combine(date, datetime.min.time()) + time_delta
 	new_wi.status = "To Do"
 	new_wi.reference_doctype = "Work Item"
 	new_wi.reference_document = wi_doc.name
@@ -437,13 +440,14 @@ def resend_for_rework(docname, rework_comments, target_end_date):
 	doc.status = "In Progress"
 	doc.rework_count += 1
 	if target_end_date:
-		doc.append(
-			"activities",
-			{
-				"action_type": "Target End Date",
-				"time": get_datetime(target_end_date).replace(second=0, microsecond=0),
-			},
-		)
+		doc.target_end_date = get_datetime(target_end_date).replace(second=0, microsecond=0)
+		# doc.append(
+		# 	"activities",
+		# 	{
+		# 		"action_type": "Target End Date",
+		# 		"time": get_datetime(target_end_date).replace(second=0, microsecond=0),
+		# 	},
+		# )
 	doc.save(ignore_permissions=True)
 	doc.add_comment("Comment", rework_comments)
 	content = f"A work item <b>{docname}</b> has been sent for Rework - {rework_comments}.<br><a href='{frappe.utils.get_url()}/app/work-item/{docname}'>View Work Item</a>"
@@ -451,13 +455,13 @@ def resend_for_rework(docname, rework_comments, target_end_date):
 
 
 def calculate_planned_target(doc):
-	planned_end_time = None
+	# planned_end_time = None
 
-	for row in doc.activities:
-		if row.action_type == "Target End Date" and (planned_end_time is None or row.time > planned_end_time):
-			planned_end_time = row.time
+	# for row in doc.activities:
+	# 	if row.action_type == "Target End Date" and (planned_end_time is None or row.time > planned_end_time):
+	# 		planned_end_time = row.time
 
-	if planned_end_time:
+	if planned_end_time := doc.target_end_date:
 		planned_end_time = get_datetime(planned_end_time)
 		sent_alert_on = frappe.get_single_value("Work Item Configuration", "sent_reminder_before")
 		hr, mm, sec = [int(float(x)) for x in sent_alert_on.split(":")]
@@ -525,17 +529,18 @@ def calculate_score(doc):
 	if doc.status != "Done":
 		return
 
-	planned_end_time = None
+	# planned_end_time = None
 	actual_end_time = None
 	for row in doc.activities:
-		if row.action_type == "Target End Date":
-			if planned_end_time is None or row.time > planned_end_time:
-				planned_end_time = row.time
-		elif row.action_type == "Actual End Time":
+		# if row.action_type == "Target End Date":
+		# 	if planned_end_time is None or row.time > planned_end_time:
+		# 		planned_end_time = row.time
+		# el
+		if row.action_type == "Actual End Time":
 			if actual_end_time is None or row.time > actual_end_time:
 				actual_end_time = row.time
 
-	planned_end_time = get_datetime(planned_end_time)
+	planned_end_time = get_datetime(doc.target_end_date)
 	actual_end_time = get_datetime(actual_end_time)
 
 	if not (planned_end_time and actual_end_time):
@@ -595,12 +600,15 @@ def create_sub_task(self, idx):
 		doc.assignee = task.assignee or self.assignee  # TODO: implementation based on role
 		hours_as_float = task.target_end_date_time.total_seconds() / 3600
 
-		doc.append(
-			"activities",
-			{
-				"action_type": "Target End Date",
-				"time": (now_datetime() + timedelta(hours=hours_as_float)).replace(second=0, microsecond=0),
-			},
+		# doc.append(
+		# 	"activities",
+		# 	{
+		# 		"action_type": "Target End Date",
+		# 		"time": (now_datetime() + timedelta(hours=hours_as_float)).replace(second=0, microsecond=0),
+		# 	},
+		# )
+		doc.target_end_date = (now_datetime() + timedelta(hours=hours_as_float)).replace(
+			second=0, microsecond=0
 		)
 		doc.save(ignore_permissions=True)
 		sent_noti(doc.name)
@@ -620,13 +628,13 @@ def update_target_end_on_start_date_change(work_flow_template, start_date_time):
 def time_extension_request(doc, reason, req_target_date_time):
 	doc = frappe.get_doc("Work Item", doc)
 	to = []
-	for row in doc.activities:
-		if row.action_type == "Target End Date":
-			current_target_date = row.time
+	# for row in doc.activities:
+	# 	if row.action_type == "Target End Date":
+	# 		current_target_date = row.time
 
 	ext_doc = frappe.new_doc("Work Item Time Extension")
 	ext_doc.work_item_reference = doc.name
-	ext_doc.current_target_date = current_target_date
+	ext_doc.current_target_date = doc.target_end_date
 	ext_doc.requested_due_date = req_target_date_time
 	ext_doc.reason = reason
 	ext_doc.requester = doc.assignee
@@ -672,19 +680,28 @@ def apply_updates_to_work_item(docname, updates, one_time=False, change_date=Non
 
 
 def _get_work_item(docname, change_date=None):
+	# query = """
+	#     SELECT DISTINCT wi.name
+	#     FROM `tabWork Item` wi
+	#     INNER JOIN `tabWork Item Log` wil
+	#         ON wil.parent = wi.name
+	#         AND wil.parenttype = 'Work Item'
+	#         AND wil.parentfield = 'activities'
+	#     WHERE wi.reference_document = %s
+	#         AND wi.reference_doctype = 'Work Item'
+	#         AND wi.status != 'Done'
+	#         AND wi.status != 'Under Review'
+	#         AND wi.status != 'In Progress'
+	#         AND wil.action_type = 'Target End Date'
+	# """
 	query = """
         SELECT DISTINCT wi.name
         FROM `tabWork Item` wi
-        INNER JOIN `tabWork Item Log` wil
-            ON wil.parent = wi.name
-            AND wil.parenttype = 'Work Item'
-            AND wil.parentfield = 'activities'
         WHERE wi.reference_document = %s
             AND wi.reference_doctype = 'Work Item'
             AND wi.status != 'Done'
             AND wi.status != 'Under Review'
             AND wi.status != 'In Progress'
-            AND wil.action_type = 'Target End Date'
     """
 	params = [docname]
 
@@ -693,7 +710,7 @@ def _get_work_item(docname, change_date=None):
 		start_dt = target_dt.replace(hour=0, minute=0, second=0, microsecond=0)
 		end_dt = target_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-		query += " AND wil.time BETWEEN %s AND %s"
+		query += " AND wi.target_end_date BETWEEN %s AND %s"
 		params.extend([start_dt, end_dt])
 
 	return frappe.db.sql(query, tuple(params))

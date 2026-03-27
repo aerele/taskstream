@@ -22,7 +22,8 @@ def update_status(docname, status):
 	wit.status = status
 	if status == "Approved":
 		# add the requested_due_date date to the work item in the wit.work_item_reference, efficiently(new doc to hcild table ?)
-		wit_doc = frappe.get_doc("Work Item", wit.work_item_reference)
-		wit_doc.append("activities", {"action_type": "Target End Date", "time": wit.requested_due_date})
-		wit_doc.save()
+		wi_doc = frappe.get_doc("Work Item", wit.work_item_reference)
+		# wi_doc.append("activities", {"action_type": "Target End Date", "time": wit.requested_due_date})
+		wi_doc.target_end_date = wit.requested_due_date
+		wi_doc.save()
 	wit.save()

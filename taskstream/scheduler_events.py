@@ -77,7 +77,8 @@ def _create_work_item(doc, roles, summary, description):
 	wi.reference_doctype = doc.doctype
 	wi.reference_document = doc.name
 	wi.recurrence_type = "One Time"
-	wi.append("activities", {"action_type": "Target End Date", "time": _get_future_time(2)})
+	wi.target_end_date = _get_future_time(2)
+	# wi.append("activities", {"action_type": "Target End Date", "time": _get_future_time(2)})
 	wi.save()
 
 

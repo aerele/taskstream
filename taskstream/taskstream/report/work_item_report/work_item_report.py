@@ -37,17 +37,6 @@ def get_data(filters=None):
 	work_item = DocType("Work Item")
 	work_item_log = DocType("Work Item Log")
 
-	target_subquery = (
-		frappe.qb.from_(work_item_log)
-		.select(work_item_log.parent, Max(work_item_log.time).as_("target_date"))
-		.where(
-			(work_item_log.parenttype == "Work Item")
-			& (work_item_log.parentfield == "activities")
-			& (work_item_log.action_type == "Target End Date")
-		)
-		.groupby(work_item_log.parent)
-	).as_("target_log")
-
 	actual_subquery = (
 		frappe.qb.from_(work_item_log)
 		.select(work_item_log.parent, Max(work_item_log.time).as_("actual_end"))
@@ -61,8 +50,6 @@ def get_data(filters=None):
 
 	query = (
 		frappe.qb.from_(work_item)
-		.left_join(target_subquery)
-		.on(target_subquery.parent == work_item.name)
 		.left_join(actual_subquery)
 		.on(actual_subquery.parent == work_item.name)
 		.select(
@@ -74,19 +61,19 @@ def get_data(filters=None):
 			work_item.reference_document,
 			work_item.reference_doctype,
 			work_item.benefit_of_work_done,
-			target_subquery.target_date,
+			work_item.target_end_date.as_("target_date"),
 			actual_subquery.actual_end,
 		)
-		.where(target_subquery.target_date.isnotnull())
+		.where(work_item.target_end_date.isnotnull())
 	)
 
 	if reporting_type == "Upcoming":
-		query = query.where(target_subquery.target_date.between(start_dt, end_dt))
+		query = query.where(work_item.target_end_date.between(start_dt, end_dt))
 	else:
-		query = query.where(target_subquery.target_date.between(start_dt, end_dt))
+		query = query.where(work_item.target_end_date.between(start_dt, end_dt))
 		query = query.where(work_item.status != "Done")
 
-	rows = query.orderby(target_subquery.target_date).run(as_dict=True)
+	rows = query.orderby(work_item.target_end_date).run(as_dict=True)
 
 	results = []
 	now = now_datetime()
