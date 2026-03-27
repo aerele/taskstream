@@ -421,10 +421,11 @@ def mark_complete(docname):
 	doc = frappe.get_doc("Work Item", docname)
 
 	doc.status = "Done"
-	doc.append(
-		"activities",
-		{"action_type": "Actual End Time", "time": now_datetime().replace(second=0, microsecond=0)},
-	)
+	doc.actual_end_date = now_datetime().replace(second=0, microsecond=0)
+	# doc.append(
+	# 	"activities",
+	# 	{"action_type": "Actual End Time", "time": now_datetime().replace(second=0, microsecond=0)},
+	# )
 	doc.save(ignore_permissions=True)
 
 
@@ -530,18 +531,17 @@ def calculate_score(doc):
 		return
 
 	# planned_end_time = None
-	actual_end_time = None
-	for row in doc.activities:
-		# if row.action_type == "Target End Date":
-		# 	if planned_end_time is None or row.time > planned_end_time:
-		# 		planned_end_time = row.time
-		# el
-		if row.action_type == "Actual End Time":
-			if actual_end_time is None or row.time > actual_end_time:
-				actual_end_time = row.time
+	# actual_end_time = None
+	# for row in doc.activities:
+	# if row.action_type == "Target End Date":
+	# 	if planned_end_time is None or row.time > planned_end_time:
+	# 		planned_end_time = row.time
+	# elif row.action_type == "Actual End Time":
+	# if actual_end_time is None or row.time > actual_end_time:
+	# 	actual_end_time = row.time
 
 	planned_end_time = get_datetime(doc.target_end_date)
-	actual_end_time = get_datetime(actual_end_time)
+	actual_end_time = get_datetime(doc.actual_end_date)
 
 	if not (planned_end_time and actual_end_time):
 		return

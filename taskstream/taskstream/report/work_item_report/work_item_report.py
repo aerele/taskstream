@@ -5,7 +5,6 @@ from datetime import datetime, time
 
 import frappe
 from frappe.query_builder import DocType
-from frappe.query_builder.functions import Max
 from frappe.utils import add_days, get_datetime, getdate, now_datetime
 
 
@@ -35,23 +34,9 @@ def get_data(filters=None):
 	reporting_type = filters.get("reporting_type") or "Upcoming"
 
 	work_item = DocType("Work Item")
-	work_item_log = DocType("Work Item Log")
-
-	actual_subquery = (
-		frappe.qb.from_(work_item_log)
-		.select(work_item_log.parent, Max(work_item_log.time).as_("actual_end"))
-		.where(
-			(work_item_log.parenttype == "Work Item")
-			& (work_item_log.parentfield == "activities")
-			& (work_item_log.action_type == "Actual End Time")
-		)
-		.groupby(work_item_log.parent)
-	).as_("actual_log")
 
 	query = (
 		frappe.qb.from_(work_item)
-		.left_join(actual_subquery)
-		.on(actual_subquery.parent == work_item.name)
 		.select(
 			work_item.name.as_("work_item"),
 			work_item.summary,
@@ -62,7 +47,7 @@ def get_data(filters=None):
 			work_item.reference_doctype,
 			work_item.benefit_of_work_done,
 			work_item.target_end_date.as_("target_date"),
-			actual_subquery.actual_end,
+			work_item.actual_end_date.as_("actual_end"),
 		)
 		.where(work_item.target_end_date.isnotnull())
 	)

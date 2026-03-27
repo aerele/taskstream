@@ -48,6 +48,7 @@
   "column_break_ekrr",
   "created_on",
   "target_end_date",
+  "actual_end_date",
   "section_break_mlmv",
   "initial_details_column",
   "activities",
@@ -393,13 +394,18 @@
   {
    "fieldname": "column_break_ekrr",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "actual_end_date",
+   "fieldtype": "Datetime",
+   "label": "Actual End Date"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-27 16:22:48.397544",
+ "modified": "2026-03-27 17:22:14.628881",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
