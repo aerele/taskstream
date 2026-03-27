@@ -14,6 +14,10 @@ frappe.ui.form.on("Work Item", {
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
 		const allowed = !(type === "One Time" || type === "Recurring Instance");
+		//hide benefit_of_work_done if form is new
+		if (frm.is_new()) {
+			frm.set_df_property("benefit_of_work_done", "hidden", 1);
+		}
 		//Update Master Recurring Work Item
 		if (allowed && (user === frm.doc.reporter || user === frm.doc.requester)) {
 			frm.add_custom_button(__("Update Recurrence Item"), function () {

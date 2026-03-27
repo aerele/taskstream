@@ -13,8 +13,8 @@ from taskstream.taskstream import send_notifications
 
 class WorkItem(Document):
 	def validate(self):
-		if not self.created_on:
-			self.created_on = now_datetime().date()
+		if not self.assigned_on:
+			self.assigned_on = now_datetime().date()
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
 			planned_end_exists = (
 				self.target_end_date

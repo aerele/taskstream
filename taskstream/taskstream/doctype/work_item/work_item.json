@@ -21,9 +21,9 @@
   "review_required",
   "people_section",
   "requester",
-  "reviewer",
   "reporter",
   "assignee",
+  "reviewer",
   "section_break_pyzl",
   "reference_doctype",
   "column_break_cswc",
@@ -46,7 +46,7 @@
   "monthly_recurrence_based_on",
   "recurrence_month",
   "column_break_ekrr",
-  "created_on",
+  "assigned_on",
   "target_end_date",
   "actual_end_date",
   "section_break_mlmv",
@@ -266,13 +266,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "created_on",
-   "fieldtype": "Date",
-   "label": "Created On",
-   "options": "Today",
-   "read_only": 1
-  },
-  {
    "fieldname": "attachment",
    "fieldtype": "Attach",
    "label": "Attachment"
@@ -399,13 +392,20 @@
    "fieldname": "actual_end_date",
    "fieldtype": "Datetime",
    "label": "Actual End Date"
+  },
+  {
+   "fieldname": "assigned_on",
+   "fieldtype": "Date",
+   "label": "Assigned On",
+   "options": "Today",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-27 17:55:15.072070",
+ "modified": "2026-03-27 18:27:22.202074",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
