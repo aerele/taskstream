@@ -7,6 +7,7 @@ def execute():
 	create_weekdays()
 	create_permissions()
 	create_role()
+	update_user_list_link()
 
 
 def create_months():
@@ -72,3 +73,14 @@ def create_role():
 	frappe.get_doc({"doctype": "Role", "role_name": "Work Item Admin"}).insert(
 		ignore_permissions=True, ignore_if_duplicate=True
 	)
+
+
+def update_user_list_link():
+	prop_setter = frappe.new_doc("Property Setter")
+	prop_setter.doctype_or_field = "DocType"
+	prop_setter.doc_type = "User"
+	prop_setter.property = "show_title_field_in_link"
+	prop_setter.property_type = "check"
+	prop_setter.value = 1
+	prop_setter.module = "taskstream"
+	prop_setter.insert(ignore_if_duplicate=True)
