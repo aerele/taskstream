@@ -10,7 +10,7 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	refresh: function (frm) {
-		setup_two_col_layout(frm);
+		// setup_two_col_layout(frm);
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
 		const allowed = !(type === "One Time" || type === "Recurring Instance");
