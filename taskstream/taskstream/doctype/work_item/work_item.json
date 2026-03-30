@@ -7,23 +7,25 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "settings_section",
+  "work_flow",
+  "review_required",
   "section_break_gnhu",
   "work_flow_template",
   "column_break_nvbq",
   "start_date_time",
-  "basic_details_section",
-  "summary",
-  "description",
-  "attachment",
-  "benefit_of_work_done",
-  "settings_section",
-  "work_flow",
-  "review_required",
   "people_section",
   "requester",
   "reporter",
   "assignee",
   "reviewer",
+  "basic_details_section",
+  "summary",
+  "column_break_bxlz",
+  "attachment",
+  "benefit_of_work_done",
+  "section_break_deee",
+  "description",
   "section_break_pyzl",
   "reference_doctype",
   "column_break_cswc",
@@ -391,7 +393,8 @@
   {
    "fieldname": "actual_end_date",
    "fieldtype": "Datetime",
-   "label": "Actual End Date"
+   "label": "Actual End Date",
+   "read_only": 1
   },
   {
    "fieldname": "assigned_on",
@@ -399,13 +402,21 @@
    "label": "Assigned On",
    "options": "Today",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_bxlz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_deee",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-27 18:27:22.202074",
+ "modified": "2026-03-30 11:40:03.402206",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

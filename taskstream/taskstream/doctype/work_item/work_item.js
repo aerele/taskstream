@@ -873,106 +873,106 @@ function UpdateWorkItemDetails(frm) {
 	d.show();
 }
 
-function setup_two_col_layout(frm) {
-	const SIDEBAR_SECTIONS = ["people_section", "settings_section"];
-	const WRAP_ATTR = "data-wi-wrap";
+// function setup_two_col_layout(frm) {
+// 	const SIDEBAR_SECTIONS = ["people_section", "settings_section"];
+// 	const WRAP_ATTR = "data-wi-wrap";
 
-	clearTimeout(frm._wi_layout_timer);
+// 	clearTimeout(frm._wi_layout_timer);
 
-	function getActivePane() {
-		let $pane = $(frm.wrapper).find(".tab-pane.show.active, .tab-pane.active").first();
-		if ($pane.length) return $pane;
+// 	function getActivePane() {
+// 		let $pane = $(frm.wrapper).find(".tab-pane.show.active, .tab-pane.active").first();
+// 		if ($pane.length) return $pane;
 
-		$pane = $(frm.wrapper)
-			.find(".layout-main-section .form-page, .layout-main-section")
-			.filter(function () {
-				return $(this).children(".form-section").length > 0;
-			})
-			.first();
+// 		$pane = $(frm.wrapper)
+// 			.find(".layout-main-section .form-page, .layout-main-section")
+// 			.filter(function () {
+// 				return $(this).children(".form-section").length > 0;
+// 			})
+// 			.first();
 
-		return $pane.length ? $pane : null;
-	}
+// 		return $pane.length ? $pane : null;
+// 	}
 
-	function teardown() {
-		$(frm.wrapper)
-			.find(`[${WRAP_ATTR}]`)
-			.each(function () {
-				const $wrap = $(this);
-				const $pane = $wrap.closest(".tab-pane, .layout-main-section");
-				$wrap.find(".form-section").each(function () {
-					($pane.length ? $pane : $wrap.parent()).append(this);
-				});
-				$wrap.remove();
-			});
-	}
+// 	function teardown() {
+// 		$(frm.wrapper)
+// 			.find(`[${WRAP_ATTR}]`)
+// 			.each(function () {
+// 				const $wrap = $(this);
+// 				const $pane = $wrap.closest(".tab-pane, .layout-main-section");
+// 				$wrap.find(".form-section").each(function () {
+// 					($pane.length ? $pane : $wrap.parent()).append(this);
+// 				});
+// 				$wrap.remove();
+// 			});
+// 	}
 
-	function applyLayout() {
-		teardown();
+// 	function applyLayout() {
+// 		teardown();
 
-		const $pane = getActivePane();
-		if (!$pane) return;
+// 		const $pane = getActivePane();
+// 		if (!$pane) return;
 
-		const $sections = $pane.children(".form-section");
-		const hasSidebar = $sections
-			.toArray()
-			.some((el) => SIDEBAR_SECTIONS.includes($(el).attr("data-fieldname")));
-		if (!hasSidebar) return;
+// 		const $sections = $pane.children(".form-section");
+// 		const hasSidebar = $sections
+// 			.toArray()
+// 			.some((el) => SIDEBAR_SECTIONS.includes($(el).attr("data-fieldname")));
+// 		if (!hasSidebar) return;
 
-		const $wrap = $("<div>").attr(WRAP_ATTR, "1").css({
-			display: "flex",
-			flexWrap: "wrap",
-			gap: "20px",
-			alignItems: "start",
-		});
-		const $main = $("<div>").css({ flex: "1 1 55%", minWidth: "320px" });
-		const $side = $("<div>").css({ flex: "1 1 300px", minWidth: "300px", maxWidth: "360px" });
+// 		const $wrap = $("<div>").attr(WRAP_ATTR, "1").css({
+// 			display: "flex",
+// 			flexWrap: "wrap",
+// 			gap: "20px",
+// 			alignItems: "start",
+// 		});
+// 		const $main = $("<div>").css({ flex: "1 1 55%", minWidth: "320px" });
+// 		const $side = $("<div>").css({ flex: "1 1 300px", minWidth: "300px", maxWidth: "360px" });
 
-		$sections.each(function () {
-			if (SIDEBAR_SECTIONS.includes($(this).attr("data-fieldname"))) {
-				$side.append(this);
-			} else {
-				$main.append(this);
-			}
-		});
+// 		$sections.each(function () {
+// 			if (SIDEBAR_SECTIONS.includes($(this).attr("data-fieldname"))) {
+// 				$side.append(this);
+// 			} else {
+// 				$main.append(this);
+// 			}
+// 		});
 
-		$pane.append($wrap.append($main).append($side));
-	}
+// 		$pane.append($wrap.append($main).append($side));
+// 	}
 
-	function scheduleLayout(delay = 50) {
-		clearTimeout(frm._wi_layout_timer);
-		frm._wi_layout_timer = setTimeout(applyLayout, delay);
-	}
+// 	function scheduleLayout(delay = 50) {
+// 		clearTimeout(frm._wi_layout_timer);
+// 		frm._wi_layout_timer = setTimeout(applyLayout, delay);
+// 	}
 
-	if (!frm.layout._wi_refresh_patched) {
-		frm.layout._wi_refresh_patched = true;
-		const orig_refresh = frm.layout.refresh_sections;
-		frm.layout.refresh_sections = function () {
-			orig_refresh.apply(this, arguments);
+// 	if (!frm.layout._wi_refresh_patched) {
+// 		frm.layout._wi_refresh_patched = true;
+// 		const orig_refresh = frm.layout.refresh_sections;
+// 		frm.layout.refresh_sections = function () {
+// 			orig_refresh.apply(this, arguments);
 
-			$(frm.wrapper)
-				.find(`[${WRAP_ATTR}] .form-section:not(.hide-control)`)
-				.each(function () {
-					const $sec = $(this);
-					if (!$sec.find(".frappe-control:not(.hide-control)").length) {
-						$sec.addClass("empty-section");
-					}
-				});
-		};
-	}
+// 			$(frm.wrapper)
+// 				.find(`[${WRAP_ATTR}] .form-section:not(.hide-control)`)
+// 				.each(function () {
+// 					const $sec = $(this);
+// 					if (!$sec.find(".frappe-control:not(.hide-control)").length) {
+// 						$sec.addClass("empty-section");
+// 					}
+// 				});
+// 		};
+// 	}
 
-	$(frm.wrapper).off("shown.bs.tab.wi click.wi");
-	$(frm.wrapper).on(
-		"shown.bs.tab.wi click.wi",
-		'.nav-tabs .nav-link, a[data-toggle="tab"]',
-		function () {
-			scheduleLayout(50);
-			setTimeout(applyLayout, 200);
-			setTimeout(applyLayout, 500);
-		}
-	);
+// 	$(frm.wrapper).off("shown.bs.tab.wi click.wi");
+// 	$(frm.wrapper).on(
+// 		"shown.bs.tab.wi click.wi",
+// 		'.nav-tabs .nav-link, a[data-toggle="tab"]',
+// 		function () {
+// 			scheduleLayout(50);
+// 			setTimeout(applyLayout, 200);
+// 			setTimeout(applyLayout, 500);
+// 		}
+// 	);
 
-	scheduleLayout(0);
-	setTimeout(applyLayout, 100);
-	setTimeout(applyLayout, 300);
-	setTimeout(applyLayout, 1000);
-}
+// 	scheduleLayout(0);
+// 	setTimeout(applyLayout, 100);
+// 	setTimeout(applyLayout, 300);
+// 	setTimeout(applyLayout, 1000);
+// }
