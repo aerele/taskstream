@@ -57,8 +57,9 @@ class WorkItem(Document):
 		# 		target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
 		# 		current_slot = (date, target_time)
 
-		date = self.target_end_date.date()
-		t = self.target_end_date.time()
+		target_end_datetime = get_datetime(self.target_end_date)
+		date = target_end_datetime.date()
+		t = target_end_datetime.time()
 		target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
 		current_slot = (date, target_time)
 
@@ -419,7 +420,8 @@ def send_for_review(docname, reviewer):
 @frappe.whitelist()
 def mark_complete(docname):
 	doc = frappe.get_doc("Work Item", docname)
-
+	if doc.benefit_of_work_done < 1 and doc.review_required == 1:
+		frappe.throw("Please enter a valid benefit of work done")
 	doc.status = "Done"
 	doc.actual_end_date = now_datetime().replace(second=0, microsecond=0)
 	# doc.append(
@@ -559,11 +561,38 @@ def calculate_score(doc):
 			(total_delay_minutes % 1440) * config.penalty_per_minute
 		)
 	delay_penalty = min(delay_penalty, config.max_delay_penalty)
+	benefit_penalty = _get_benefit_penelty(doc.benefit_of_work_done, config.completion_score)
 	revision_penalty = (doc.revision_count / config.max_allowed_revision) * config.revision_impact
 	rework_penalty = (doc.rework_count / config.max_allowed_rework) * config.rework_impact
 	rework_penalty = min(rework_penalty, config.max_rework_penalty)
-	total_score = 0 - delay_penalty - revision_penalty - rework_penalty
+	total_score = 0 - benefit_penalty - delay_penalty - revision_penalty - rework_penalty
 	doc.score = max(total_score, -100)
+	doc.score_summary = score_summary(
+		delay_penalty,
+		rework_penalty,
+		revision_penalty,
+		benefit_penalty,
+		doc.score,
+		doc.target_end_date,
+		doc.actual_end_date,
+		total_delay_minutes,
+		config.penalty_per_minute,
+		doc.rework_count,
+		config.rework_impact,
+		config.max_allowed_rework,
+		config.max_rework_penalty,
+		doc.revision_count,
+		config.revision_impact,
+		config.max_allowed_revision,
+		max_delay_points=config.max_delay_penalty,
+		benefit_of_work_done=doc.benefit_of_work_done,
+		completion_score=config.completion_score,
+	)
+
+
+def _get_benefit_penelty(benefit_of_work_done, completion_score):
+	benefit_of_work_done = 100 - float(benefit_of_work_done)
+	return (benefit_of_work_done / 100) * completion_score
 
 
 @frappe.whitelist()
@@ -745,3 +774,121 @@ def _purge_work_item(docname):
 	work_items = _get_work_item(docname)
 	for item in work_items:
 		frappe.delete_doc("Work Item", item[0], force=True)
+
+
+@frappe.whitelist()
+def get_wft_data(wft):
+	return frappe.get_doc("Work Flow Template Item", {"parent": wft, "idx": 1})
+
+
+def score_summary(
+	delay_penalty,
+	rework_penalty,
+	revision_penalty,
+	benefit_penalty,
+	total_penalty,
+	target_end_date,
+	actual_end_date,
+	delay_time,
+	ppm,
+	rework_count,
+	rework_impact,
+	max_allowed_rework,
+	max_rework_penalty,
+	revision_count,
+	revision_impact,
+	max_allowed_revision,
+	max_delay_points,
+	benefit_of_work_done,
+	completion_score,
+):
+	delay_hours = delay_time / 60
+
+	summary = "Delay Penalty          : " + str(delay_penalty) + " <br>"
+	summary += "Revision Penalty       : " + str(revision_penalty) + " <br>"
+	summary += "Rework Penalty         : " + str(rework_penalty) + " <br>"
+	summary += "Benefit Penalty        : " + str(benefit_penalty) + " <br>"
+	summary += "-----------------------------" + " <br>"
+	summary += "Total Penalty          : " + str(total_penalty) + " <br>"
+	summary += "-----------------------------" + " <br>"
+
+	summary += "<b><u>Delay Penalty Breakdown</u></b>" + " <br>"
+	summary += "<ul>"
+	summary += "<li>Planned Target Time: " + str(target_end_date) + "</li>"
+	summary += "<li>Actual Target Time: " + str(actual_end_date) + "</li>"
+	summary += "<li>Delay Hours: " + str(delay_hours) + "</li>"
+	summary += "<li>Max Delay Points: " + str(max_delay_points) + "</li>"
+	summary += "</ul>"
+	summary += "<u>Delay Penalty Calculation</u><br>"
+	summary += "Penalty Points per Minute: " + str(ppm) + "<br>"
+	summary += (
+		"Delay Penalty: ("
+		+ str(delay_hours)
+		+ " * 60 * "
+		+ str(ppm)
+		+ ") = "
+		+ str(delay_hours * 60 * ppm)
+		+ " or "
+		+ str(max_delay_points)
+		+ "(Whichever is lowest)"
+		+ "<br><br>"
+	)
+
+	summary += "<b><u>Rework Penalty Breakdown</u></b>"
+	summary += "<ul>"
+	summary += "<li>Rework count: " + str(rework_count) + "</li>"
+	summary += "<li>Rework Impact: " + str(rework_impact) + "</li>"
+	summary += "<li>Max Rework Penalty: " + str(max_rework_penalty) + "</li>"
+	summary += "<li>Max allowed rework: " + str(max_allowed_rework) + "</li>"
+	summary += "</ul>"
+	summary += "<u>Rework Penalty Calculation</u><br>"
+	summary += (
+		"Rework Penalty: (("
+		+ str(rework_count)
+		+ " / "
+		+ str(max_allowed_rework)
+		+ ") * "
+		+ str(rework_impact)
+		+ " = "
+		+ str((rework_count / max_allowed_rework) * rework_impact)
+		+ " or "
+		+ str(max_rework_penalty)
+		+ "(Whichever is lowest)"
+		+ "<br><br>"
+	)
+
+	summary += "<b><u>Revision Penalty Breakdown</u></b>"
+	summary += "<ul>"
+	summary += "<li>Revision count: " + str(revision_count) + "</li>"
+	summary += "<li>Revision Impact: " + str(revision_impact) + "</li>"
+	summary += "<li>Max allowed revision: " + str(max_allowed_revision) + "</li>"
+	summary += "</ul>"
+	summary += "<u>Revision Penalty Calculation</u><br>"
+	summary += (
+		"Revision Penalty: (("
+		+ str(revision_count)
+		+ " / "
+		+ str(max_allowed_revision)
+		+ ") * "
+		+ str(revision_impact)
+		+ " = "
+		+ str((rework_count / max_allowed_rework) * rework_impact)
+		+ "<br><br>"
+	)
+
+	summary += "<b><u>Work Benefit Penalty Breakdown</u></b>"
+	summary += "<ul>"
+	summary += "<li>Work Benefit of Work Done %: " + str(benefit_of_work_done) + "</li>"
+	summary += "<li>Benefit Penalty Weightage: " + str(completion_score) + "</li>"
+	summary += "</ul>"
+	summary += "<u>Work Benefit Penalty Calculation</u><br>"
+	summary += (
+		"Work Benefit Penalty: ((100 - "
+		+ str(benefit_of_work_done)
+		+ "%) of "
+		+ str(completion_score)
+		+ ") = "
+		+ str((100 - benefit_of_work_done) / completion_score)
+	)
+
+	return summary

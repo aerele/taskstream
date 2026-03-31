@@ -29,9 +29,7 @@ frappe.ui.form.on("Work Item", {
 			(frm.doc.status === "In Progress" &&
 				!frm.doc.review_required &&
 				user === frm.doc.assignee) ||
-			(frm.doc.status === "Under Review" &&
-				user === frm.doc.reviewer &&
-				frm.doc.benefit_of_work_done > 0)
+			(frm.doc.status === "Under Review" && user === frm.doc.reviewer)
 		) {
 			frm.add_custom_button(__("Mark Complete"), function () {
 				frappe.confirm(
@@ -387,6 +385,7 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	work_flow_template(frm) {
+		setup_work_flow_template(frm);
 		set_target_end_date_time(frm);
 	},
 
@@ -871,6 +870,24 @@ function UpdateWorkItemDetails(frm) {
 		},
 	});
 	d.show();
+}
+
+function setup_work_flow_template(frm) {
+	if (frm.doc.work_flow_template) {
+		frappe.call({
+			method: "taskstream.taskstream.doctype.work_item.work_item.get_wft_data",
+			args: {
+				wft: frm.doc.work_flow_template,
+			},
+			callback: function (r) {
+				if (!r.exc) {
+					frm.set_value("assignee", r.message.assignee);
+					frm.set_value("summary", r.message.task_name);
+					frm.set_value("description", r.message.task_description);
+				}
+			},
+		});
+	}
 }
 
 // function setup_two_col_layout(frm) {

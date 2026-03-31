@@ -22,12 +22,14 @@
    "fieldname": "work_item_reference",
    "fieldtype": "Link",
    "label": "Work Item Reference",
-   "options": "Work Item"
+   "options": "Work Item",
+   "read_only": 1
   },
   {
    "fieldname": "current_target_date",
    "fieldtype": "Datetime",
-   "label": "Current Target Date"
+   "label": "Current Target Date",
+   "read_only": 1
   },
   {
    "fieldname": "requested_due_date",
@@ -43,43 +45,49 @@
    "fieldname": "requester",
    "fieldtype": "Link",
    "label": "Requester",
-   "options": "User"
+   "options": "User",
+   "read_only": 1
   },
   {
    "fieldname": "approver",
    "fieldtype": "Table MultiSelect",
    "label": "Approver",
-   "options": "Approval User"
+   "options": "Approval User",
+   "read_only": 1
   },
   {
    "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Pending\nApproved\nRejected"
+   "options": "Pending\nApproved\nRejected",
+   "read_only": 1
   },
   {
    "fieldname": "requested_date",
    "fieldtype": "Datetime",
-   "label": "Requested Date"
+   "label": "Requested Date",
+   "read_only": 1
   },
   {
    "fieldname": "reviewed_by",
    "fieldtype": "Link",
    "label": "Reviewed By",
-   "options": "User"
+   "options": "User",
+   "read_only": 1
   },
   {
    "fieldname": "reviewed_on",
    "fieldtype": "Datetime",
-   "label": "Reviewed On"
+   "label": "Reviewed On",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-26 23:57:25.370224",
+ "modified": "2026-03-31 11:50:46.196093",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Time Extension",
