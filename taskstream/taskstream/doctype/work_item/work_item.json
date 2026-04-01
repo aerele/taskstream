@@ -116,8 +116,7 @@
   },
   {
    "fieldname": "recurrence_details_column",
-   "fieldtype": "Column Break",
-   "label": "Recurrence Details"
+   "fieldtype": "Column Break"
   },
   {
    "depends_on": "eval: doc.recurrence_type == 'Yearly'",
@@ -320,7 +319,8 @@
   },
   {
    "fieldname": "section_break_kqer",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Recurrence Details"
   },
   {
    "fieldname": "score_tab",
@@ -403,7 +403,7 @@
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-31 18:42:28.713131",
+ "modified": "2026-04-01 10:49:27.934855",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
