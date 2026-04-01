@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_auto_repeat": 1,
  "allow_rename": 1,
  "autoname": "WI-.####",
  "creation": "2025-06-26 17:45:14.163828",
@@ -404,7 +403,7 @@
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-31 12:43:29.021735",
+ "modified": "2026-03-31 18:42:28.713131",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
