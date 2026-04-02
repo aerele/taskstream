@@ -52,6 +52,7 @@ def create_permissions():
 			"if_owner": 1,
 		},
 		"Reassignment History": ["read", "select", "write", "create"],
+		"Work Item Score Summary": ["read", "select"],
 	}
 
 	for doctype, config in doctype_permissions.items():

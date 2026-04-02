@@ -356,6 +356,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "100",
    "fieldname": "benefit_of_work_done",
    "fieldtype": "Percent",
    "label": "Benefit of Work Done (%)"
@@ -403,7 +404,7 @@
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-01 10:49:27.934855",
+ "modified": "2026-04-01 14:14:16.796155",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

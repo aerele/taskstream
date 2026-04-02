@@ -9,6 +9,9 @@ from frappe.model.document import Document
 from frappe.utils import cint, get_datetime, now_datetime
 
 from taskstream.taskstream import send_notifications
+from taskstream.taskstream.doctype.work_item_score_summary.work_item_score_summary import (
+	create_summary_record,
+)
 
 
 class WorkItem(Document):
@@ -33,8 +36,8 @@ class WorkItem(Document):
 		if self.status == "In Progress":
 			calculate_planned_target(self)
 
+		calculate_score(self)
 		if self.status == "Done":
-			calculate_score(self)
 			if self.work_flow_template:
 				create_sub_task(self, self.idx)
 
@@ -529,8 +532,10 @@ def ensure_time(value):
 
 
 def calculate_score(doc):
-	if doc.status != "Done":
-		return
+	# if doc.is_new():
+	# 	return
+	# if doc.status != "Done":
+	# 	return
 
 	# planned_end_time = None
 	# actual_end_time = None
@@ -542,28 +547,33 @@ def calculate_score(doc):
 	# if actual_end_time is None or row.time > actual_end_time:
 	# 	actual_end_time = row.time
 
-	planned_end_time = get_datetime(doc.target_end_date)
-	actual_end_time = get_datetime(doc.actual_end_date)
+	planned_end_time = get_datetime(doc.target_end_date) if doc.target_end_date else None
+	actual_end_time = get_datetime(doc.actual_end_date) if doc.actual_end_date else now_datetime()
 
-	if not (planned_end_time and actual_end_time):
+	if not planned_end_time:
 		return
 
-	if actual_end_time <= planned_end_time:
-		doc.score = 0
-		return
+	# if actual_end_time <= planned_end_time:
+	# 	doc.score = 0
+	# 	return
 
-	config = frappe.get_single("Work Item Configuration")
-	total_delay_minutes = (actual_end_time - planned_end_time).total_seconds() / 60
-	if total_delay_minutes < 1440:
-		delay_penalty = total_delay_minutes * config.penalty_per_minute
+	if actual_end_time:
+		config = frappe.get_single("Work Item Configuration")
+		total_delay_minutes = (actual_end_time - planned_end_time).total_seconds() / 60
+		if actual_end_time <= planned_end_time:
+			delay_penalty = 0
+		elif total_delay_minutes < 1440:
+			delay_penalty = total_delay_minutes * config.penalty_per_minute
+		else:
+			delay_penalty = ((total_delay_minutes // 1440) * config.penalty_points_per_day) + (
+				(total_delay_minutes % 1440) * config.penalty_per_minute
+			)
+		delay_penalty = min(delay_penalty, config.max_delay_penalty)
 	else:
-		delay_penalty = ((total_delay_minutes // 1440) * config.penalty_points_per_day) + (
-			(total_delay_minutes % 1440) * config.penalty_per_minute
-		)
-	delay_penalty = min(delay_penalty, config.max_delay_penalty)
+		delay_penalty = 0
 	benefit_penalty = _get_benefit_penelty(doc.benefit_of_work_done, config.completion_score)
-	revision_penalty = (doc.revision_count / config.max_allowed_revision) * config.revision_impact
-	rework_penalty = (doc.rework_count / config.max_allowed_rework) * config.rework_impact
+	revision_penalty = ((doc.revision_count or 0) / config.max_allowed_revision) * config.revision_impact
+	rework_penalty = ((doc.rework_count or 0) / config.max_allowed_rework) * config.rework_impact
 	rework_penalty = min(rework_penalty, config.max_rework_penalty)
 	total_score = 0 - benefit_penalty - delay_penalty - revision_penalty - rework_penalty
 	doc.score = max(total_score, -100)
@@ -588,10 +598,18 @@ def calculate_score(doc):
 		benefit_of_work_done=doc.benefit_of_work_done,
 		completion_score=config.completion_score,
 	)
+	create_summary_record(doc.score_summary, doc.name, "Work Item")
+
+
+@frappe.whitelist()
+def recalculate_score(docname):
+	doc = frappe.get_doc("Work Item", docname)
+	calculate_score(doc)
+	doc.save()
 
 
 def _get_benefit_penelty(benefit_of_work_done, completion_score):
-	benefit_of_work_done = 100 - float(benefit_of_work_done)
+	benefit_of_work_done = 100 - float(benefit_of_work_done or 0)
 	return (benefit_of_work_done / 100) * completion_score
 
 
@@ -850,7 +868,7 @@ def score_summary(
 		+ ") * "
 		+ str(rework_impact)
 		+ " = "
-		+ str((rework_count / max_allowed_rework) * rework_impact)
+		+ str(((rework_count or 0) / max_allowed_rework) * rework_impact)
 		+ " or "
 		+ str(max_rework_penalty)
 		+ "(Whichever is lowest)"
@@ -872,7 +890,7 @@ def score_summary(
 		+ ") * "
 		+ str(revision_impact)
 		+ " = "
-		+ str((rework_count / max_allowed_rework) * rework_impact)
+		+ str(((revision_count or 0) / max_allowed_revision) * revision_impact)
 		+ "<br><br>"
 	)
 
@@ -888,7 +906,7 @@ def score_summary(
 		+ "%) of "
 		+ str(completion_score)
 		+ ") = "
-		+ str((100 - benefit_of_work_done) / completion_score)
+		+ str((100 - (int(benefit_of_work_done) or 0)) / completion_score)
 	)
 
 	return summary

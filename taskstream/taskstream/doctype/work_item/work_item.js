@@ -11,6 +11,7 @@ frappe.ui.form.on("Work Item", {
 
 	refresh: function (frm) {
 		setup_two_col_layout(frm);
+		add_recalculate_score_button(frm);
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
 		const allowed = !(type === "One Time" || type === "Recurring Instance");
@@ -992,4 +993,40 @@ function setup_two_col_layout(frm) {
 	setTimeout(applyLayout, 100);
 	setTimeout(applyLayout, 300);
 	setTimeout(applyLayout, 1000);
+}
+
+function add_recalculate_score_button(frm) {
+	const score_field = frm.get_field("score");
+	if (!score_field?.$wrapper) return;
+
+	score_field.$wrapper.find(".wi-recalculate-score-wrap").remove();
+
+	const $wrapper = $(`
+		<div class="wi-recalculate-score-wrap" style="margin-top: 8	px;">
+			<button type="button" class="btn btn-xs btn-default wi-recalculate-score-btn">
+				${__("Recalculate Score")}
+			</button>
+		</div>
+	`);
+
+	$wrapper.find(".wi-recalculate-score-btn").on("click", () => {
+		if (frm.is_new()) {
+			frappe.msgprint(__("Please save this Work Item before recalculating score."));
+			return;
+		}
+
+		frappe.call({
+			method: "taskstream.taskstream.doctype.work_item.work_item.recalculate_score",
+			args: { docname: frm.doc.name },
+			freeze: true,
+			freeze_message: __("Recalculating score..."),
+			callback: function (r) {
+				if (r.exc) return;
+				frappe.show_alert({ message: __("Score recalculated"), indicator: "green" });
+				frm.reload_doc();
+			},
+		});
+	});
+
+	score_field.$wrapper.append($wrapper);
 }
