@@ -9,9 +9,10 @@ class WorkItemScoreSummary(Document):
 	pass
 
 
-def create_summary_record(summary, wi, generated_from):
+def create_summary_record(summary, wi, score, generated_from):
 	summary_doc = frappe.new_doc("Work Item Score Summary")
 	summary_doc.work_item = wi
 	summary_doc.summary = summary
+	summary_doc.score = score
 	summary_doc.generated_from = generated_from
 	summary_doc.insert(ignore_permissions=True)

@@ -171,12 +171,15 @@ permission_query_conditions = {
 # }
 
 scheduler_events = {
+	"daily": [
+		"taskstream.taskstream.tasks.report_data.get_report_data",
+	],
 	"cron": {
 		"* * * * *": [
 			"taskstream.taskstream.doctype.work_item.work_item.send_twenty_percent_reminders",
 			"taskstream.taskstream.doctype.work_item.work_item.send_deadline_reminders",
 		]
-	}
+	},
 }
 
 # Testing

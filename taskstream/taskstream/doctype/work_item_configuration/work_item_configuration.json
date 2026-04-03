@@ -32,7 +32,8 @@
   "system_notification",
   "report_tab",
   "reporting_frequency",
-  "no_of_cycles_in_report"
+  "no_of_cycles_in_report",
+  "last_executed_on"
  ],
  "fields": [
   {
@@ -211,6 +212,12 @@
    "fieldtype": "Int",
    "label": "No of Cycles in Report",
    "reqd": 1
+  },
+  {
+   "fieldname": "last_executed_on",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Last executed on"
   }
  ],
  "grid_page_length": 50,
@@ -218,7 +225,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-02 11:25:03.346767",
+ "modified": "2026-04-02 13:26:20.624089",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Configuration",

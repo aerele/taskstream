@@ -6,7 +6,7 @@ from datetime import datetime, time, timedelta
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import cint, get_datetime, now_datetime
+from frappe.utils import get_datetime, now_datetime
 
 from taskstream.taskstream import send_notifications
 from taskstream.taskstream.doctype.work_item_score_summary.work_item_score_summary import (
@@ -36,7 +36,7 @@ class WorkItem(Document):
 		if self.status == "In Progress":
 			calculate_planned_target(self)
 
-		calculate_score(self)
+		calculate_score(self, "Work Item")
 		if self.status == "Done":
 			if self.work_flow_template:
 				create_sub_task(self, self.idx)
@@ -531,7 +531,7 @@ def ensure_time(value):
 # 			frappe.log_error("Deadline Reminder Error", f"User {item.assignee} has no valid email.")
 
 
-def calculate_score(doc):
+def calculate_score(doc, type):
 	# if doc.is_new():
 	# 	return
 	# if doc.status != "Done":
@@ -598,13 +598,13 @@ def calculate_score(doc):
 		benefit_of_work_done=doc.benefit_of_work_done,
 		completion_score=config.completion_score,
 	)
-	create_summary_record(doc.score_summary, doc.name, "Work Item")
+	create_summary_record(doc.score_summary, doc.name, doc.score, type)
 
 
 @frappe.whitelist()
 def recalculate_score(docname):
 	doc = frappe.get_doc("Work Item", docname)
-	calculate_score(doc)
+	calculate_score(doc, "Work Item")
 	doc.save()
 
 

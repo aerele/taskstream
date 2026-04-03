@@ -22,4 +22,11 @@ frappe.query_reports["Work Item Score Board"] = {
 			options: "User",
 		},
 	],
+	formatter: function (value, row, column, data, default_formatter) {
+		value = default_formatter(value, row, column, data);
+		if (data && data.is_group) {
+			value = `<strong>${value}</strong>`;
+		}
+		return value;
+	},
 };
