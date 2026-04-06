@@ -422,6 +422,9 @@ def send_for_review(docname, reviewer):
 
 @frappe.whitelist()
 def mark_complete(docname):
+	print("****************************************")
+	print("Marking complete for", docname)
+	print("****************************************")
 	doc = frappe.get_doc("Work Item", docname)
 	if doc.benefit_of_work_done < 1 and doc.review_required == 1:
 		frappe.throw("Please enter a valid benefit of work done")
@@ -577,6 +580,8 @@ def calculate_score(doc, type):
 	rework_penalty = min(rework_penalty, config.max_rework_penalty)
 	total_score = 0 - benefit_penalty - delay_penalty - revision_penalty - rework_penalty
 	doc.score = max(total_score, -100)
+	if doc.is_new():
+		return
 	doc.score_summary = score_summary(
 		delay_penalty,
 		rework_penalty,

@@ -10,12 +10,19 @@ from frappe.utils import add_days, get_datetime, getdate, now_datetime
 
 def execute(filters=None):
 	no_of_cycles_in_report = frappe.get_doc("Work Item Configuration", "Work Item Configuration")
+	if (
+		no_of_cycles_in_report.last_executed_on is None
+		or no_of_cycles_in_report.no_of_cycles_in_report == 0
+		or no_of_cycles_in_report.reporting_frequency == 0
+	):
+		# If the report is being run for the first time and cycles are configured, set the last_executed_on to now
+		frappe.throw("Please Complete the Work Item Configuration setup to run the report.")
 	cycle_dates = get_cycles(
 		no_of_cycles_in_report.last_executed_on,
 		no_of_cycles_in_report.reporting_frequency,
 		no_of_cycles_in_report.no_of_cycles_in_report,
 	)
-	# (last_date, reporting_frequency, no_of_cycles):
+
 	filters = filters or {}
 	columns = get_columns(cycle_dates)
 	data = get_data(filters, cycle_dates, no_of_cycles_in_report.no_of_cycles_in_report)

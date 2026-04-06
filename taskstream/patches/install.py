@@ -45,10 +45,10 @@ def create_permissions():
 		"Weekday": ["read", "select"],
 		"Work Item Configuration": ["read", "select"],
 		"Work Flow Template": ["read", "select", "write", "create", "submit"],
-		"Work Item": ["read", "select", "write", "create", "submit"],
+		"Work Item": ["read", "select", "write", "create"],
 		"Work Item Time Extension": ["read", "select", "write", "create"],
 		"Collection": {
-			"permissions": ["read", "select", "write", "create", "submit", "delete"],
+			"permissions": ["read", "select", "write", "create", "delete"],
 			"if_owner": 1,
 		},
 		"Reassignment History": ["read", "select", "write", "create"],
