@@ -82,13 +82,13 @@
    "options": "One Time\nDaily\nWeekly\nMonthly\nYearly\nRecurring Instance"
   },
   {
-   "default": "To Do",
+   "default": "Open",
    "fieldname": "status",
    "fieldtype": "Select",
    "hidden": 1,
    "in_list_view": 1,
    "label": "Status",
-   "options": "To Do\nIn Progress\nUnder Review\nDone\nOn Hold\nRework Needed",
+   "options": "To Do\nOpen\nIn Progress\nUnder Review\nDone\nOn Hold\nRework Needed",
    "read_only": 1
   },
   {
@@ -404,7 +404,7 @@
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-01 14:14:16.796155",
+ "modified": "2026-04-06 16:19:27.326551",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
