@@ -37,6 +37,8 @@ frappe.ui.form.on("Work Item", {
 						frappe.call({
 							method: "taskstream.taskstream.doctype.work_item.work_item.mark_complete",
 							args: { docname: frm.doc.name },
+							freeze: true,
+							freeze_message: __("Applying updates..."),
 							callback: function (r) {
 								if (!r.exc) {
 									frappe.msgprint(__("Marked as Done!"));
@@ -852,22 +854,31 @@ function UpdateWorkItemDetails(frm) {
 		],
 		primary_action_label: "Submit",
 		primary_action(values) {
-			frappe.call({
-				method: "taskstream.taskstream.doctype.work_item.work_item.apply_updates_to_work_item",
-				args: {
-					docname: frm.doc.name,
-					updates: JSON.stringify(values),
-					one_time: values.one_time_change ? 1 : 0,
-					change_date: values.update_on_date || null,
-				},
-				callback: function (r) {
-					if (!r.exc) {
-						frappe.msgprint(r.message?.message || r.message || __("Update applied"));
-						d.hide();
-						frm.reload_doc();
-					}
-				},
-			});
+			frappe.confirm(
+				__(
+					"Proceeding will replace the existing documents with a new work item that includes the updates. Are you sure?"
+				),
+				function () {
+					frappe.call({
+						method: "taskstream.taskstream.doctype.work_item.work_item.apply_updates_to_work_item",
+						args: {
+							docname: frm.doc.name,
+							updates: JSON.stringify(values),
+							one_time: values.one_time_change ? 1 : 0,
+							change_date: values.update_on_date || null,
+						},
+						callback: function (r) {
+							if (!r.exc) {
+								frappe.msgprint(
+									r.message?.message || r.message || __("Update applied")
+								);
+								d.hide();
+								frm.reload_doc();
+							}
+						},
+					});
+				}
+			);
 		},
 	});
 	d.show();
