@@ -227,6 +227,7 @@
    "options": "Work Flow Template"
   },
   {
+   "default": "1",
    "fieldname": "idx",
    "fieldtype": "Int",
    "hidden": 1,
@@ -404,7 +405,7 @@
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-06 16:19:27.326551",
+ "modified": "2026-04-07 14:04:33.208208",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

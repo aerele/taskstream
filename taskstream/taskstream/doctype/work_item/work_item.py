@@ -37,8 +37,10 @@ class WorkItem(Document):
 			calculate_planned_target(self)
 
 		calculate_score(self, "Work Item")
-		if self.status == "Done":
-			if self.work_flow_template:
+		if self.work_flow_template:
+			if self.idx == 0:
+				self.idx = 1
+			if self.status == "Done":
 				create_sub_task(self, self.idx)
 
 			self.create_work_item_recurrences()
