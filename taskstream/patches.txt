@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 taskstream.patches.install #5
 taskstream.patches.wi_target_end_date
+taskstream.patches.wi_status_to_open
