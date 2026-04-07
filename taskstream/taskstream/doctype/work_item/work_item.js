@@ -27,9 +27,7 @@ frappe.ui.form.on("Work Item", {
 		}
 		// Mark Complete button
 		if (
-			(frm.doc.status === "In Progress" &&
-				!frm.doc.review_required &&
-				user === frm.doc.assignee) ||
+			(frm.doc.status === "Open" && !frm.doc.review_required && user === frm.doc.assignee) ||
 			(frm.doc.status === "Under Review" && user === frm.doc.reviewer)
 		) {
 			frm.add_custom_button(__("Mark Complete"), function () {
@@ -54,7 +52,7 @@ frappe.ui.form.on("Work Item", {
 		if (
 			!frm.doc.first_mail &&
 			!frm.is_dirty() &&
-			frm.doc.status === "To Do" &&
+			frm.doc.status === "Open" &&
 			(user === frm.doc.reporter || user === frm.doc.requester)
 		) {
 			frm.add_custom_button(__("Sent Mail"), function () {
@@ -111,22 +109,22 @@ frappe.ui.form.on("Work Item", {
 			});
 		}
 		// Start Now Button
-		if (!frm.is_new() && frm.doc.status === "To Do" && frm.doc.assignee === user) {
-			frm.add_custom_button(__("Start Now"), function () {
-				frappe.call({
-					method: "taskstream.taskstream.doctype.work_item.work_item.start_now",
-					args: { docname: frm.doc.name },
-					callback: function (r) {
-						if (!r.exc) {
-							frappe.msgprint(__("Work Item started!"));
-							frm.reload_doc();
-						}
-					},
-				});
-			});
-		}
+		// if (!frm.is_new() && frm.doc.status === "To Do" && frm.doc.assignee === user) {
+		// 	frm.add_custom_button(__("Start Now"), function () {
+		// 		frappe.call({
+		// 			method: "taskstream.taskstream.doctype.work_item.work_item.start_now",
+		// 			args: { docname: frm.doc.name },
+		// 			callback: function (r) {
+		// 				if (!r.exc) {
+		// 					frappe.msgprint(__("Work Item started!"));
+		// 					frm.reload_doc();
+		// 				}
+		// 			},
+		// 		});
+		// 	});
+		// }
 		//Hold Button
-		if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
+		if (frm.doc.status === "Open" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Hold"), function () {
 				frappe.db.set_value("Work Item", frm.doc.name, "status", "On Hold").then(() => {
 					frappe.msgprint(__("Work Item put on hold!"));
@@ -137,19 +135,17 @@ frappe.ui.form.on("Work Item", {
 		//Resume Button
 		if (frm.doc.status === "On Hold" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Resume"), function () {
-				frappe.db
-					.set_value("Work Item", frm.doc.name, "status", "In Progress")
-					.then(() => {
-						frappe.msgprint(__("Work Item resumed!"));
-						frm.reload_doc();
-					});
+				frappe.db.set_value("Work Item", frm.doc.name, "status", "Open").then(() => {
+					frappe.msgprint(__("Work Item resumed!"));
+					frm.reload_doc();
+				});
 			});
 		}
 		// Send for Review button
-		if (!frm.is_new() && ["In Progress", "Under Review"].includes(frm.doc.status)) {
+		if (!frm.is_new() && ["Open", "Under Review"].includes(frm.doc.status)) {
 			const iscritical = frm.doc.review_required;
 
-			if (iscritical && user === frm.doc.assignee && frm.doc.status == "In Progress") {
+			if (iscritical && user === frm.doc.assignee && frm.doc.status == "Open") {
 				frm.add_custom_button(__("Send for Review"), function () {
 					frappe.call({
 						method: "taskstream.taskstream.doctype.work_item.work_item.send_for_review",
@@ -168,7 +164,7 @@ frappe.ui.form.on("Work Item", {
 			}
 		}
 		//Time extension button
-		if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
+		if (frm.doc.status === "Open" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Request Time Extension"), function () {
 				let d = new frappe.ui.Dialog({
 					title: "Request Time Extension",
@@ -229,7 +225,11 @@ frappe.ui.form.on("Work Item", {
 			frm.doc.reporter,
 			frm.doc.requester,
 		];
-		if (frm.doc.status === "In Progress" && approved_users_for_reassignment.includes(user)) {
+		if (
+			frm.doc.status === "Open" &&
+			approved_users_for_reassignment.includes(user) &&
+			!frm.is_new()
+		) {
 			frm.add_custom_button(__("Reassign"), function () {
 				let d = new frappe.ui.Dialog({
 					title: "Reassignment",

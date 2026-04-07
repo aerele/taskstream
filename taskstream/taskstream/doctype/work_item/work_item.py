@@ -33,7 +33,7 @@ class WorkItem(Document):
 			):
 				self.validate_recurrence_time()
 
-		if self.status == "In Progress":
+		if self.status == "Open":
 			calculate_planned_target(self)
 
 		calculate_score(self, "Work Item")
@@ -405,7 +405,7 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	# 	},
 	# )
 	new_wi.target_end_date = datetime.combine(date, datetime.min.time()) + time_delta
-	new_wi.status = "To Do"
+	new_wi.status = "Open"
 	new_wi.reference_doctype = "Work Item"
 	new_wi.reference_document = wi_doc.name
 	new_wi.owner = wi_doc.owner
@@ -422,9 +422,6 @@ def send_for_review(docname, reviewer):
 
 @frappe.whitelist()
 def mark_complete(docname):
-	print("****************************************")
-	print("Marking complete for", docname)
-	print("****************************************")
 	doc = frappe.get_doc("Work Item", docname)
 	if doc.benefit_of_work_done < 1 and doc.review_required == 1:
 		frappe.throw("Please enter a valid benefit of work done")
@@ -437,16 +434,16 @@ def mark_complete(docname):
 	doc.save(ignore_permissions=True)
 
 
-@frappe.whitelist()
-def start_now(docname):
-	frappe.db.set_value("Work Item", docname, "status", "In Progress")
-	frappe.db.set_value("Work Item", docname, "first_mail", 1)
+# @frappe.whitelist()
+# def start_now(docname):
+# 	frappe.db.set_value("Work Item", docname, "status", "In Progress")
+# 	frappe.db.set_value("Work Item", docname, "first_mail", 1)
 
 
 @frappe.whitelist()
 def resend_for_rework(docname, rework_comments, target_end_date):
 	doc = frappe.get_doc("Work Item", docname)
-	doc.status = "In Progress"
+	doc.status = "Open"
 	doc.rework_count += 1
 	if target_end_date:
 		doc.target_end_date = get_datetime(target_end_date).replace(second=0, microsecond=0)
@@ -645,7 +642,7 @@ def create_sub_task(self, idx):
 		task = frappe.get_doc("Work Flow Template Item", {"parent": self.work_flow_template, "idx": idx + 1})
 		doc = frappe.copy_doc(self)
 		doc.activities = []
-		doc.status = "To Do"
+		doc.status = "Open"
 		doc.summary = task.task_name
 		doc.idx = idx + 1
 		doc.description = task.task_description
@@ -753,7 +750,6 @@ def _get_work_item(docname, change_date=None):
             AND wi.reference_doctype = 'Work Item'
             AND wi.status != 'Done'
             AND wi.status != 'Under Review'
-            AND wi.status != 'In Progress'
     """
 	params = [docname]
 
@@ -765,7 +761,12 @@ def _get_work_item(docname, change_date=None):
 		query += " AND wi.target_end_date BETWEEN %s AND %s"
 		params.extend([start_dt, end_dt])
 
-	return frappe.db.sql(query, tuple(params))
+	if not change_date:
+		work_item = frappe.db.sql(query, tuple(params))
+		work_item = work_item[1:]
+		return work_item
+	else:
+		return frappe.db.sql(query, tuple(params))
 
 
 def _update_work_item(item_name, updates):
