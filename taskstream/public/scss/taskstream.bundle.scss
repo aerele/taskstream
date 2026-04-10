@@ -210,6 +210,8 @@
    This replaces the bulky stackColumns JS inline-style injections.
    ─────────────────────────────────────────────────────────────────────────── */
 .form-section[data-fieldname="settings_section"],
+.form-section[data-fieldname="section_break_maby"],
+.form-section[data-fieldname="section_break_iwoa"],
 .form-section[data-fieldname="people_section"] {
 	.row,
 	.form-layout-flex {

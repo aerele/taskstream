@@ -5,8 +5,12 @@ frappe.ui.form.on("Work Item", {
 	onload: function (frm) {
 		if (frm.is_new() && !frm.doc.reporter) {
 			frm.set_value("reporter", frappe.session.user);
+			frm.set_value("requester", frappe.session.user);
 		}
 		update_recurrence_description(frm);
+		if (frm.is_new() && !frm.doc.target_end_date) {
+			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
+		}
 	},
 
 	refresh: function (frm) {
@@ -55,6 +59,7 @@ frappe.ui.form.on("Work Item", {
 			!frm.doc.first_mail &&
 			!frm.is_dirty() &&
 			frm.doc.status === "Open" &&
+			["One Time", "Recurring Instance"].includes(frm.doc.recurrence_type) &&
 			(user === frm.doc.reporter || user === frm.doc.requester)
 		) {
 			frm.add_custom_button(__("Sent Mail"), function () {
@@ -230,6 +235,7 @@ frappe.ui.form.on("Work Item", {
 		if (
 			frm.doc.status === "Open" &&
 			approved_users_for_reassignment.includes(user) &&
+			["One Time", "Recurring Instance"].includes(frm.doc.recurrence_type) &&
 			!frm.is_new()
 		) {
 			frm.add_custom_button(__("Reassign"), function () {
@@ -305,7 +311,6 @@ frappe.ui.form.on("Work Item", {
 
 	review_required: function (frm) {
 		if (frm.doc.review_required && !frm.doc.reviewer) {
-			frm.set_value("reviewer", frappe.session.user);
 			frm.set_df_property("reviewer", "reqd", frm.doc.review_required);
 		}
 		if (!frm.doc.review_required) {
@@ -447,25 +452,6 @@ frappe.ui.form.on("Recurrence Time", {
 		update_recurrence_description(frm);
 	},
 });
-
-frappe.ui.form.on("Work Item Log", {
-	activities_add: function (frm, cdt, cdn) {
-		apply_default_activity_time(cdt, cdn);
-	},
-	time: function (frm, cdt, cdn) {
-		apply_default_activity_time(cdt, cdn);
-	},
-});
-
-function apply_default_activity_time(cdt, cdn) {
-	const row = locals[cdt][cdn];
-	if (!row || row.time) return;
-
-	const today = frappe.datetime.get_today();
-	const default_time = `${today} 23:59:59`;
-
-	frappe.model.set_value(cdt, cdn, "time", default_time);
-}
 
 frappe.ui.form.on("Recurrence Day Occurrence", {
 	weekday: function (frm, cdt, cdn) {
@@ -903,7 +889,12 @@ function setup_work_flow_template(frm) {
 }
 
 function setup_two_col_layout(frm) {
-	const SIDEBAR_SECTIONS = ["people_section", "settings_section"];
+	const SIDEBAR_SECTIONS = [
+		"section_break_iwoa",
+		"people_section",
+		"settings_section",
+		"section_break_maby",
+	];
 	const WRAP_ATTR = "data-wi-wrap";
 
 	clearTimeout(frm._wi_layout_timer);
