@@ -6,6 +6,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_break_iwoa",
+  "target_end_date",
   "settings_section",
   "work_flow",
   "review_required",
@@ -18,13 +20,13 @@
   "reporter",
   "assignee",
   "reviewer",
+  "section_break_maby",
+  "benefit_of_work_done",
   "basic_details_section",
   "summary",
-  "column_break_bxlz",
-  "attachment",
-  "benefit_of_work_done",
   "section_break_deee",
   "description",
+  "attachments",
   "section_break_pyzl",
   "reference_doctype",
   "column_break_cswc",
@@ -48,7 +50,6 @@
   "recurrence_month",
   "column_break_ekrr",
   "assigned_on",
-  "target_end_date",
   "actual_end_date",
   "section_break_lqwq",
   "recurrence_date",
@@ -253,11 +254,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "attachment",
-   "fieldtype": "Attach",
-   "label": "Attachment"
-  },
-  {
    "fieldname": "settings_section",
    "fieldtype": "Section Break",
    "label": "Settings"
@@ -387,10 +383,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "column_break_bxlz",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "section_break_deee",
    "fieldtype": "Section Break"
   },
@@ -399,13 +391,27 @@
    "fieldtype": "Long Text",
    "label": "Score Summary",
    "read_only": 1
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Table",
+   "label": "Attachments",
+   "options": "Work Item Attachment"
+  },
+  {
+   "fieldname": "section_break_iwoa",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_maby",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-07 14:04:33.208208",
+ "modified": "2026-04-11 02:02:32.197870",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
