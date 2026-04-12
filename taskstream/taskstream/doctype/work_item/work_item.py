@@ -602,7 +602,15 @@ def calculate_score(doc, type):
 		benefit_of_work_done=doc.benefit_of_work_done,
 		completion_score=config.completion_score,
 	)
-	create_summary_record(doc.score_summary, doc.name, doc.score, type)
+	# run create_summary_record if type = Reporting Window or if there are changes in score, status, rework_count, revision_count, target_end_date (check with data before save)
+	if type == "Reporting Window" or (
+		type == "Work Item"
+		and any(
+			doc.has_value_changed(f)
+			for f in ("score", "status", "rework_count", "revision_count", "target_end_date")
+		)
+	):
+		create_summary_record(doc.score_summary, doc.name, doc.score, type)
 
 
 @frappe.whitelist()
@@ -842,20 +850,20 @@ def score_summary(
 	summary += "<ul>"
 	summary += "<li>Planned Target Time: " + str(target_end_date) + "</li>"
 	summary += "<li>Actual Target Time: " + str(actual_end_date) + "</li>"
-	summary += "<li>Delay Hours: " + str(delay_hours) + "</li>"
+	summary += "<li>Delay Hours: " + str(round(delay_hours, 2)) + "</li>"
 	summary += "<li>Max Delay Points: " + str(max_delay_points) + "</li>"
 	summary += "</ul>"
 	summary += "<u>Delay Penalty Calculation</u><br>"
 	summary += "Penalty Points per Minute: " + str(ppm) + "<br>"
 	summary += (
 		"Delay Penalty: ("
-		+ str(delay_hours)
+		+ str(round(delay_hours, 2))
 		+ " * 60 * "
 		+ str(ppm)
 		+ ") = "
-		+ str(delay_hours * 60 * ppm)
+		+ str(round(delay_hours * 60 * ppm, 2))
 		+ " or "
-		+ str(max_delay_points)
+		+ str(round(max_delay_points, 2))
 		+ "(Whichever is lowest)"
 		+ "<br><br>"
 	)
@@ -878,7 +886,7 @@ def score_summary(
 		+ " = "
 		+ str(((rework_count or 0) / max_allowed_rework) * rework_impact)
 		+ " or "
-		+ str(max_rework_penalty)
+		+ str(round(max_rework_penalty, 2))
 		+ "(Whichever is lowest)"
 		+ "<br><br>"
 	)
@@ -898,7 +906,7 @@ def score_summary(
 		+ ") * "
 		+ str(revision_impact)
 		+ " = "
-		+ str(((revision_count or 0) / max_allowed_revision) * revision_impact)
+		+ str(round(((revision_count or 0) / max_allowed_revision) * revision_impact, 2))
 		+ "<br><br>"
 	)
 
@@ -914,7 +922,7 @@ def score_summary(
 		+ "%) of "
 		+ str(completion_score)
 		+ ") = "
-		+ str((100 - (int(benefit_of_work_done) or 0)) / completion_score)
+		+ str(round(((100 - (int(benefit_of_work_done) or 0)) / completion_score), 2))
 	)
 
 	return summary

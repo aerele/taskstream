@@ -10,13 +10,13 @@ frappe.query_reports["Work Item Report"] = {
 		// 	options: "Daily\nWeekly\nFortnight\nMonthly\nCustom",
 		// 	default: "Daily",
 		// },
-		{
-			fieldname: "reporting_type",
-			label: __("Reporting Type"),
-			fieldtype: "Select",
-			options: "Upcoming\nOverdue",
-			default: "Upcoming",
-		},
+		// {
+		// 	fieldname: "reporting_type",
+		// 	label: __("Reporting Type"),
+		// 	fieldtype: "Select",
+		// 	options: "Upcoming\nOverdue",
+		// 	default: "Upcoming",
+		// },
 		// {
 		// 	fieldname: "from_date",
 		// 	label: __("From Date"),

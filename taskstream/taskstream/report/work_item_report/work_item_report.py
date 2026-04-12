@@ -1,11 +1,13 @@
 # Copyright (c) 2026, Chethan - Aerele and contributors
 # For license information, please see license.txt
 
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
 import frappe
 from frappe.query_builder import DocType
-from frappe.utils import add_days, get_datetime, getdate, now_datetime
+from frappe.utils import add_days, get_datetime, now_datetime
+
+from taskstream.api import get_cycles
 
 
 def execute(filters=None):
@@ -21,6 +23,7 @@ def execute(filters=None):
 		no_of_cycles_in_report.last_executed_on,
 		no_of_cycles_in_report.reporting_frequency,
 		no_of_cycles_in_report.no_of_cycles_in_report,
+		no_of_cycles_in_report.starting_date,
 	)
 
 	filters = filters or {}
@@ -33,8 +36,7 @@ def get_columns(cycle_dates):
 	columns = [
 		{"label": "Work Item", "fieldname": "work_item", "fieldtype": "Link", "options": "Work Item"},
 		{"label": "Summary", "fieldname": "summary", "fieldtype": "Data"},
-		{"label": "Description", "fieldname": "description", "fieldtype": "Data"},
-		{"label": "Assignee", "fieldname": "assignee", "fieldtype": "Link", "options": "User"},
+		{"label": "Assignee", "fieldname": "assignee", "fieldtype": "Data"},
 		{"label": "Status", "fieldname": "status", "fieldtype": "Data"},
 		{"label": "Reference", "fieldname": "reference", "fieldtype": "Link", "options": "Work Item"},
 		{"label": "Expected Target Date", "fieldname": "target_date", "fieldtype": "Datetime"},
@@ -49,36 +51,40 @@ def get_columns(cycle_dates):
 def get_data(filters=None, cycle_dates=None, no_of_cycles=0):
 	filters = filters or {}
 	no_of_cycles_in_report = frappe.get_doc("Work Item Configuration", "Work Item Configuration")
-	start_dt, end_dt = _get_window(filters, no_of_cycles_in_report.reporting_frequency)
-	reporting_type = filters.get("reporting_type") or "Upcoming"
+	start_dt, end_dt = _get_window(
+		filters,
+		no_of_cycles_in_report.last_executed_on,
+		no_of_cycles_in_report.reporting_frequency,
+	)
+	# reporting_type = filters.get("reporting_type") or "Upcoming"
 
 	work_item = DocType("Work Item")
 	work_item_summary = DocType("Work Item Score Summary")
 
-	query = (
-		frappe.qb.from_(work_item)
-		.select(
-			work_item.name.as_("work_item"),
-			work_item.summary,
-			work_item.description,
-			work_item.assignee,
-			work_item.status,
-			work_item.reference_document,
-			work_item.reference_doctype,
-			work_item.benefit_of_work_done,
-			work_item.target_end_date.as_("target_date"),
-			work_item.actual_end_date.as_("actual_end"),
-		)
-		.where(work_item.target_end_date.isnotnull())
+	base_query = frappe.qb.from_(work_item).select(
+		work_item.name.as_("work_item"),
+		work_item.summary,
+		work_item.assignee,
+		work_item.status,
+		work_item.reference_document,
+		work_item.reference_doctype,
+		work_item.benefit_of_work_done,
+		work_item.target_end_date.as_("target_date"),
+		work_item.actual_end_date.as_("actual_end"),
 	)
 
-	if reporting_type == "Upcoming":
-		query = query.where(work_item.target_end_date.between(start_dt, end_dt))
-	else:
-		query = query.where(work_item.target_end_date.between(start_dt, end_dt))
-		query = query.where(work_item.status != "Done")
+	query_open = base_query.where(work_item.target_end_date.between(start_dt, end_dt)).where(
+		work_item.status != "Done"
+	)
 
-	rows = query.orderby(work_item.target_end_date).run(as_dict=True)
+	query_done = base_query.where(work_item.actual_end_date.between(start_dt, end_dt)).where(
+		work_item.status == "Done"
+	)
+
+	open_rows = query_open.orderby(work_item.target_end_date).run(as_dict=True)
+	done_rows = query_done.orderby(work_item.actual_end_date).run(as_dict=True)
+
+	rows = open_rows + done_rows
 
 	results = []
 	now = now_datetime()
@@ -97,8 +103,9 @@ def get_data(filters=None, cycle_dates=None, no_of_cycles=0):
 		result_row = {
 			"work_item": row.get("work_item"),
 			"summary": row.get("summary"),
-			"description": row.get("description"),
-			"assignee": row.get("assignee"),
+			"assignee": frappe.get_cached_value("User", row.get("assignee"), "full_name")
+			if row.get("assignee")
+			else None,
 			"status": row.get("status"),
 			"reference": reference,
 			"target_date": target_date,
@@ -110,53 +117,42 @@ def get_data(filters=None, cycle_dates=None, no_of_cycles=0):
 		if no_of_cycles > 0 and cycle_dates:
 			summary_query = (
 				frappe.qb.from_(work_item_summary)
-				.select(work_item_summary.name, work_item_summary.score, work_item_summary.creation)
+				.select(
+					work_item_summary.name,
+					work_item_summary.score,
+					work_item_summary.creation,
+					work_item_summary.report_cycle,
+				)
 				.where(work_item_summary.work_item == row.get("work_item"))
 				.where(work_item_summary.generated_from == "Reporting Window")
+				.where(work_item_summary.report_cycle.isnotnull())
+				.where(work_item_summary.report_cycle.isin(cycle_dates))
 				.orderby(work_item_summary.creation)
 				.limit(no_of_cycles)
 			)
 			summary_records = summary_query.run(as_dict=True)
 
-			# Reverse to get oldest to newest for proper cycle mapping
-			summary_records = list(reversed(summary_records))
-
 			# Map scores to cycle dates
-			for idx, summary_record in enumerate(summary_records):
-				if idx < len(cycle_dates):
-					cycle_key = f"score_{cycle_dates[idx]}"
-					result_row[cycle_key] = summary_record.get("score") or 0
+			for summary_record in summary_records:
+				report_cycle = summary_record.get("report_cycle")
+				if report_cycle:
+					cycle_key = f"score_{report_cycle}"
+					score_val = summary_record.get("score") or 0
+					result_row[cycle_key] = round(score_val, 2)
 
 		results.append(result_row)
 
 	return results
 
 
-def _get_window(filters, reporting_frequency=0):
-	reporting_type = filters.get("reporting_type") or "Upcoming"
-	today = getdate()
-	if reporting_type == "Overdue":
-		end_date = add_days(today, -1)
-		start_date = add_days(end_date, -reporting_frequency + 1)
-	else:
-		start_date = today
-		end_date = add_days(today, reporting_frequency - 1)
-	start_dt = datetime.combine(start_date, time.min)
-	end_dt = datetime.combine(end_date, time.max)
+def _get_window(filters, last_executed_on, reporting_frequency=0):
+	# reporting_type = filters.get("reporting_type") or "Upcoming"
+	# if reporting_type == "Overdue":
+	# end_date = last_executed_on
+	start_date = add_days(last_executed_on, -reporting_frequency + 1)
+	# else:
+	# 	start_date = last_executed_on
+	# 	end_date = add_days(last_executed_on, reporting_frequency - 1)
+	start_dt = datetime.combine(datetime.strptime(start_date, "%Y-%m-%d"), time.min)
+	end_dt = datetime.combine(datetime.strptime(last_executed_on, "%Y-%m-%d"), time.max)
 	return start_dt, end_dt
-
-
-def get_cycles(last_date, reporting_frequency, no_of_cycles):
-	from datetime import datetime
-
-	last_date = datetime.strptime(str(last_date), "%Y-%m-%d")
-	cycles = []
-
-	current_end = last_date
-
-	for _ in range(no_of_cycles):
-		start = current_end - timedelta(days=reporting_frequency - 1)
-		cycles.append(f"{start.strftime('%b %d')} - {current_end.strftime('%b %d')}")
-		current_end = start - timedelta(days=1)
-
-	return list(cycles)

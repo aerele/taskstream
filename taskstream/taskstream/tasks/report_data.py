@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 import frappe
-from frappe.utils import get_datetime, now_datetime
+from frappe.utils import add_days, get_datetime, now_datetime
 
 from taskstream.taskstream.doctype.work_item.work_item import calculate_score
 
@@ -41,3 +41,10 @@ def get_report_data():
 				message=f"Error processing Work Item {work_item.name}: {e!s}",
 				title="Report Data Scheduler",
 			)
+
+	frappe.db.set_value(
+		"Work Item Configuration",
+		"Work Item Configuration",
+		"last_executed_on",
+		now_datetime().date(),
+	)

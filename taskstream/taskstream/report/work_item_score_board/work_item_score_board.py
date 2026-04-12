@@ -8,15 +8,23 @@ from frappe.query_builder import DocType
 from frappe.query_builder.functions import Coalesce, Count, Sum
 from frappe.utils import get_datetime, getdate
 
+from taskstream.api import get_cycles
+
 
 def execute(filters=None):
-	columns = get_columns()
-	data = get_data(filters)
+	wic = frappe.get_doc("Work Item Configuration", "Work Item Configuration")
+	if wic.last_executed_on is None or wic.no_of_cycles_in_report == 0 or wic.reporting_frequency == 0:
+		frappe.throw("Please Complete the Work Item Configuration setup to run the report.")
+	cycle_dates = get_cycles(
+		wic.last_executed_on, wic.reporting_frequency, wic.no_of_cycles_in_report, wic.starting_date
+	)
+	columns = get_columns(cycle_dates)
+	data = get_data(filters, cycle_dates)
 	return columns, data
 
 
-def get_columns():
-	return [
+def get_columns(cycle_dates):
+	columns = [
 		{
 			"label": "User / Team",
 			"fieldname": "user",
@@ -26,9 +34,12 @@ def get_columns():
 		},
 		{"label": "Score", "fieldname": "score", "fieldtype": "Float", "width": 300},
 	]
+	for cycle in cycle_dates:
+		columns.append({"label": f"{cycle}", "fieldname": f"score_{cycle}", "fieldtype": "Data"})
+	return columns
 
 
-def get_data(filters=None):
+def get_data(filters=None, cycle_dates=None):
 	filters = filters or {}
 	from_date = filters.get("from_date") or frappe.utils.add_months(frappe.utils.today(), -1)
 	to_date = filters.get("to_date") or frappe.utils.today()
@@ -53,8 +64,36 @@ def get_data(filters=None):
 	)
 
 	base_rows = query.run(as_dict=True)
+
+	# Fetch per-cycle scores from Work Item Score Summary
+	cycle_scores_raw = []
+	if cycle_dates:
+		try:
+			cycle_scores_raw = frappe.get_all(
+				"Work Item Score Summary",
+				filters={"report_cycle": ("in", cycle_dates)},
+				fields=["assignee", "report_cycle", "score"],
+			)
+		except Exception:
+			cycle_scores_raw = []
+
+	# Build per-user per-cycle totals and counts
+	user_cycle_stats = defaultdict(lambda: defaultdict(lambda: {"total": 0.0, "count": 0}))
+	for rec in cycle_scores_raw:
+		assignee = rec.get("assignee")
+		cycle = rec.get("report_cycle")
+		score = rec.get("score") or 0.0
+		if not assignee or not cycle:
+			continue
+		user_cycle_stats[assignee][cycle]["total"] += score
+		user_cycle_stats[assignee][cycle]["count"] += 1
+
 	erpnext_with_employee = is_erpnext_installed()
-	rows = get_hierarchical_scores(base_rows) if erpnext_with_employee else build_average_rows(base_rows)
+	rows = (
+		get_hierarchical_scores(base_rows, cycle_dates, user_cycle_stats)
+		if erpnext_with_employee
+		else build_average_rows(base_rows, cycle_dates, user_cycle_stats)
+	)
 
 	if user:
 		rows = [row for row in rows if row.get("user_id") == user]
@@ -66,22 +105,31 @@ def is_erpnext_installed():
 	return "erpnext" in frappe.get_installed_apps() and frappe.db.exists("DocType", "Employee")
 
 
-def build_average_rows(rows):
+def build_average_rows(rows, cycle_dates=None, user_cycle_stats=None):
+	cycle_dates = cycle_dates or []
+	user_cycle_stats = user_cycle_stats or {}
 	avg_rows = []
 	for row in rows:
 		count = row.get("work_item_count") or 0
 		total_score = row.get("total_score") or 0
-		avg_rows.append(
-			{
-				"user": row.get("user"),
-				"user_id": row.get("user"),
-				"score": (total_score / count) if count else 0,
-			}
-		)
+		user_id = row.get("user")
+		row_data = {
+			"user": row.get("user"),
+			"user_id": user_id,
+			"score": (total_score / count) if count else 0,
+		}
+		for cycle in cycle_dates:
+			stats = user_cycle_stats.get(user_id, {}).get(cycle, {"total": 0.0, "count": 0})
+			row_data[f"score_{cycle}"] = (stats["total"] / stats["count"]) if stats["count"] else 0
+
+		avg_rows.append(row_data)
 	return avg_rows
 
 
-def get_hierarchical_scores(base_rows):
+def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
+	cycle_dates = cycle_dates or []
+	user_cycle_stats = user_cycle_stats or {}
+
 	stats_by_user = defaultdict(lambda: {"total_score": 0, "work_item_count": 0})
 	for row in base_rows:
 		assignee = row.get("user")
@@ -128,7 +176,9 @@ def get_hierarchical_scores(base_rows):
 		if employee_name in memo:
 			return memo[employee_name]
 		if employee_name in active_stack:
-			return 0, 0
+			# cycle totals: zeros
+			cycle_totals_zero = {cycle: {"total": 0.0, "count": 0} for cycle in cycle_dates}
+			return 0, 0, cycle_totals_zero
 
 		active_stack.add(employee_name)
 
@@ -137,26 +187,44 @@ def get_hierarchical_scores(base_rows):
 		total_score = own_stats["total_score"]
 		work_item_count = own_stats["work_item_count"]
 
+		# per-cycle totals for this node (employee)
+		cycle_totals = {cycle: {"total": 0.0, "count": 0} for cycle in cycle_dates}
+		if employee_user:
+			for cycle in cycle_dates:
+				st = user_cycle_stats.get(employee_user, {}).get(cycle)
+				if st:
+					cycle_totals[cycle]["total"] += st.get("total", 0.0)
+					cycle_totals[cycle]["count"] += st.get("count", 0)
+
 		for child_employee in children_by_manager.get(employee_name, []):
-			child_total_score, child_work_item_count = aggregate_employee(child_employee)
+			child_total_score, child_work_item_count, child_cycle_totals = aggregate_employee(child_employee)
 			total_score += child_total_score
 			work_item_count += child_work_item_count
+			for cycle in cycle_dates:
+				ctot = child_cycle_totals.get(cycle, {"total": 0.0, "count": 0})
+				cycle_totals[cycle]["total"] += ctot.get("total", 0.0)
+				cycle_totals[cycle]["count"] += ctot.get("count", 0)
 
 		active_stack.remove(employee_name)
-		memo[employee_name] = (total_score, work_item_count)
+		memo[employee_name] = (total_score, work_item_count, cycle_totals)
 		return memo[employee_name]
 
 	def to_score(total_score, work_item_count):
 		return (total_score / work_item_count) if work_item_count else 0
 
-	def make_row(user, user_id, total_score, work_item_count, indent, is_group):
-		return {
+	def make_row(user, user_id, total_score, work_item_count, indent, is_group, cycle_values=None):
+		row = {
 			"user": user,
 			"user_id": user_id,
 			"score": to_score(total_score, work_item_count),
 			"indent": indent,
 			"is_group": is_group,
 		}
+		cycle_values = cycle_values or {}
+		for cycle in cycle_dates:
+			c = cycle_values.get(cycle, {"total": 0.0, "count": 0})
+			row[f"score_{cycle}"] = to_score(c.get("total", 0.0), c.get("count", 0))
+		return row
 
 	def get_user_stats(employee_user):
 		return stats_by_user.get(employee_user, {"total_score": 0, "work_item_count": 0})
@@ -175,10 +243,9 @@ def get_hierarchical_scores(base_rows):
 		if employee_name in visited:
 			return
 		visited.add(employee_name)
-
 		employee_user = employee_to_user.get(employee_name)
 		own_stats = get_user_stats(employee_user)
-		team_total_score, team_work_item_count = aggregate_employee(employee_name)
+		team_total_score, team_work_item_count, team_cycle_totals = aggregate_employee(employee_name)
 		children = children_by_manager.get(employee_name, [])
 		has_children = bool(children)
 
@@ -191,6 +258,7 @@ def get_hierarchical_scores(base_rows):
 					work_item_count=team_work_item_count,
 					indent=indent,
 					is_group=1,
+					cycle_values=team_cycle_totals,
 				)
 			)
 
@@ -203,6 +271,7 @@ def get_hierarchical_scores(base_rows):
 						work_item_count=own_stats["work_item_count"],
 						indent=indent + 1,
 						is_group=0,
+						cycle_values=user_cycle_stats.get(employee_user, {}),
 					)
 				)
 
@@ -211,6 +280,7 @@ def get_hierarchical_scores(base_rows):
 			return
 
 		if employee_user:
+			# leaf employee row
 			rows.append(
 				make_row(
 					user=employee_user,
@@ -219,6 +289,7 @@ def get_hierarchical_scores(base_rows):
 					work_item_count=own_stats["work_item_count"],
 					indent=indent,
 					is_group=0,
+					cycle_values=user_cycle_stats.get(employee_user, {}),
 				)
 			)
 
@@ -256,10 +327,11 @@ def get_hierarchical_scores(base_rows):
 				work_item_count=stats.get("work_item_count") or 0,
 				indent=0,
 				is_group=0,
+				cycle_values=user_cycle_stats.get(assignee, {}),
 			)
 		)
 
 	if not rows:
-		return build_average_rows(base_rows)
+		return build_average_rows(base_rows, cycle_dates, user_cycle_stats)
 
 	return rows
