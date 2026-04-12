@@ -7,9 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "work_item",
+  "assignee",
   "generated_from",
   "score",
-  "summary"
+  "created_on",
+  "summary",
+  "report_cycle"
  ],
  "fields": [
   {
@@ -40,13 +43,34 @@
    "in_list_view": 1,
    "label": "Score",
    "read_only": 1
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Date",
+   "label": "Created On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "report_cycle",
+   "fieldtype": "Data",
+   "label": "Report Cycle",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "work_item.assignee",
+   "fieldname": "assignee",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Assignee",
+   "options": "User",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-02 19:58:37.244398",
+ "modified": "2026-04-12 18:42:38.238871",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Score Summary",

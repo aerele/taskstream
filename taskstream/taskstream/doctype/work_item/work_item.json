@@ -58,9 +58,11 @@
   "score_tab",
   "section_break_yzzw",
   "column_break_fyin",
-  "rework_count",
   "score",
+  "count_details_section",
   "revision_count",
+  "rework_count",
+  "score_summary_section",
   "score_summary"
  ],
  "fields": [
@@ -405,13 +407,24 @@
   {
    "fieldname": "section_break_maby",
    "fieldtype": "Section Break"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "score_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Score Summary"
+  },
+  {
+   "fieldname": "count_details_section",
+   "fieldtype": "Section Break",
+   "label": "Count Details"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-11 02:02:32.197870",
+ "modified": "2026-04-12 18:48:59.356083",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

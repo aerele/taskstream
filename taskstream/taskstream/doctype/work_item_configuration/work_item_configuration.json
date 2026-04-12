@@ -33,7 +33,8 @@
   "report_tab",
   "reporting_frequency",
   "no_of_cycles_in_report",
-  "last_executed_on"
+  "last_executed_on",
+  "starting_date"
  ],
  "fields": [
   {
@@ -218,6 +219,11 @@
    "fieldtype": "Date",
    "hidden": 1,
    "label": "Last executed on"
+  },
+  {
+   "fieldname": "starting_date",
+   "fieldtype": "Date",
+   "label": "Starting Reporting From"
   }
  ],
  "grid_page_length": 50,
@@ -225,7 +231,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-02 13:26:20.624089",
+ "modified": "2026-04-08 17:44:37.911403",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Configuration",
