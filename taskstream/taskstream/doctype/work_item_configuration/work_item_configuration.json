@@ -31,6 +31,7 @@
   "email_alert",
   "system_notification",
   "report_tab",
+  "column_break_beks",
   "reporting_frequency",
   "no_of_cycles_in_report",
   "last_executed_on",
@@ -224,6 +225,11 @@
    "fieldname": "starting_date",
    "fieldtype": "Date",
    "label": "Starting Reporting From"
+  },
+  {
+   "description": "All Fields in this can only be set once",
+   "fieldname": "column_break_beks",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
@@ -231,7 +237,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-08 17:44:37.911403",
+ "modified": "2026-04-13 16:30:02.264397",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Configuration",
