@@ -222,7 +222,7 @@ frappe.ui.form.on("Work Item", {
 		}
 		//Update Recurrence Type options
 		if (frm.doc.recurrence_type != "Recurring Instance") {
-			const options = "One Time\nDaily\nWeekly\nMonthly\nYearly";
+			const options = "Daily\nWeekly\nMonthly\nYearly";
 			frm.set_df_property("recurrence_type", "options", options);
 			frm.refresh_field("recurrence_type");
 		}
@@ -895,72 +895,40 @@ function setup_two_col_layout(frm) {
 		"settings_section",
 		"section_break_maby",
 	];
-	const WRAP_ATTR = "data-wi-wrap";
-
-	clearTimeout(frm._wi_layout_timer);
-
-	function getActivePane() {
-		let $pane = $(frm.wrapper).find(".tab-pane.show.active, .tab-pane.active").first();
-		if ($pane.length) return $pane;
-
-		$pane = $(frm.wrapper)
-			.find(".layout-main-section .form-page, .layout-main-section")
-			.filter(function () {
-				return $(this).children(".form-section").length > 0;
-			})
-			.first();
-
-		return $pane.length ? $pane : null;
-	}
-
-	function teardown() {
-		$(frm.wrapper)
-			.find(`[${WRAP_ATTR}]`)
-			.each(function () {
-				const $wrap = $(this);
-				const $pane = $wrap.closest(".tab-pane, .layout-main-section");
-				$wrap.find(".form-section").each(function () {
-					($pane.length ? $pane : $wrap.parent()).append(this);
-				});
-				$wrap.remove();
-			});
-	}
+	const WRAP_CLASS = "wi-global-wrap";
+	const MAIN_CLASS = "wi-main-content";
+	const SIDE_CLASS = "wi-side-bar";
 
 	function applyLayout() {
-		teardown();
+		let $wrapper = $(frm.wrapper);
+		let $wrap = $wrapper.find("." + WRAP_CLASS);
 
-		const $pane = getActivePane();
-		if (!$pane) return;
+		if (!$wrap.length) {
+			let $formLayout = $wrapper.find(".form-layout");
+			if (!$formLayout.length) {
+				$formLayout = $wrapper.find(".layout-main-section");
+			}
+			if (!$formLayout.length) return;
 
-		const $sections = $pane.children(".form-section");
-		const hasSidebar = $sections
-			.toArray()
-			.some((el) => SIDEBAR_SECTIONS.includes($(el).attr("data-fieldname")));
-		if (!hasSidebar) return;
+			$wrap = $("<div>").addClass(WRAP_CLASS);
+			let $mainContent = $("<div>").addClass(MAIN_CLASS);
+			let $sideBar = $("<div>").addClass(SIDE_CLASS);
 
-		const $wrap = $("<div>").attr(WRAP_ATTR, "1").css({
-			display: "flex",
-			flexWrap: "wrap",
-			gap: "20px",
-			alignItems: "start",
-		});
-		const $main = $("<div>").css({ flex: "1 1 55%", minWidth: "320px" });
-		const $side = $("<div>").css({ flex: "1 1 300px", minWidth: "300px", maxWidth: "360px" });
+			$formLayout.children().appendTo($mainContent);
+			$wrap.append($mainContent).append($sideBar);
+			$formLayout.append($wrap);
+		}
 
-		$sections.each(function () {
-			if (SIDEBAR_SECTIONS.includes($(this).attr("data-fieldname"))) {
-				$side.append(this);
-			} else {
-				$main.append(this);
+		let $sideBar = $wrapper.find("." + SIDE_CLASS);
+
+		$wrapper.find(".form-section").each(function () {
+			let fieldname = $(this).attr("data-fieldname");
+			if (SIDEBAR_SECTIONS.includes(fieldname)) {
+				if ($(this).parent()[0] !== $sideBar[0]) {
+					$sideBar.append(this);
+				}
 			}
 		});
-
-		$pane.append($wrap.append($main).append($side));
-	}
-
-	function scheduleLayout(delay = 50) {
-		clearTimeout(frm._wi_layout_timer);
-		frm._wi_layout_timer = setTimeout(applyLayout, delay);
 	}
 
 	if (!frm.layout._wi_refresh_patched) {
@@ -970,31 +938,22 @@ function setup_two_col_layout(frm) {
 			orig_refresh.apply(this, arguments);
 
 			$(frm.wrapper)
-				.find(`[${WRAP_ATTR}] .form-section:not(.hide-control)`)
+				.find("." + WRAP_CLASS + " .form-section:not(.hide-control)")
 				.each(function () {
 					const $sec = $(this);
 					if (!$sec.find(".frappe-control:not(.hide-control)").length) {
 						$sec.addClass("empty-section");
+					} else {
+						$sec.removeClass("empty-section");
 					}
 				});
+
+			setTimeout(applyLayout, 0);
 		};
 	}
 
-	$(frm.wrapper).off("shown.bs.tab.wi click.wi");
-	$(frm.wrapper).on(
-		"shown.bs.tab.wi click.wi",
-		'.nav-tabs .nav-link, a[data-toggle="tab"]',
-		function () {
-			scheduleLayout(50);
-			setTimeout(applyLayout, 200);
-			setTimeout(applyLayout, 500);
-		}
-	);
-
-	scheduleLayout(0);
-	setTimeout(applyLayout, 100);
-	setTimeout(applyLayout, 300);
-	setTimeout(applyLayout, 1000);
+	setTimeout(applyLayout, 50);
+	setTimeout(applyLayout, 200);
 }
 
 function add_recalculate_score_button(frm) {

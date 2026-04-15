@@ -246,3 +246,35 @@
 		padding-right: 0 !important;
 	}
 }
+
+/* ── Two-column global layout ── */
+.wi-global-wrap {
+	display: flex;
+	gap: 20px;
+	align-items: start;
+	flex-wrap: nowrap;
+}
+
+.wi-main-content {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.wi-side-bar {
+	flex: 0 0 320px;
+	max-width: 320px;
+	position: sticky;
+	top: 80px;
+	z-index: 10;
+}
+
+@media (max-width: 991px) {
+	.wi-global-wrap {
+		flex-wrap: wrap;
+	}
+	.wi-side-bar {
+		flex: 1 1 100%;
+		max-width: 100%;
+		position: static;
+	}
+}
