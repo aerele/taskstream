@@ -6,6 +6,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "details_tab",
   "settings_section",
   "work_flow",
   "recurring_task",
@@ -430,13 +431,18 @@
   {
    "fieldname": "column_break_iejr",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-15 14:47:29.356660",
+ "modified": "2026-04-15 17:01:29.992604",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

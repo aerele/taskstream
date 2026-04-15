@@ -313,8 +313,20 @@ frappe.ui.form.on("Work Item", {
 		if (frm.doc.recurring_task === 1) {
 			frm.set_value("target_end_date", null);
 			frm.set_df_property("target_end_date", "read_only", 1);
+			const detailsTab = (frm.layout?.tabs || []).find(
+				(t) => t.df && (t.df.fieldname === "recurrence_tab" || t.label === "Recurrence")
+			);
+			if (detailsTab) {
+				detailsTab.set_active();
+			}
 		} else {
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
+			const detailsTab = (frm.layout?.tabs || []).find(
+				(t) => t.df && (t.df.fieldname === "details_tab" || t.label === "Details")
+			);
+			if (detailsTab) {
+				detailsTab.set_active();
+			}
 		}
 	},
 
