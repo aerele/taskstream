@@ -33,6 +33,10 @@ def safe_exec(func):
 class WorkItem(Document):
 	@safe_exec
 	def validate(self):
+		if self.recurrence_type == "One Time" or self.recurrence_type == "Recurring Instance":
+			is_end_date_not_in_past(self.target_end_date, self.recurrence_type)
+		else:
+			is_end_date_not_in_past(self.repeat_until, self.recurrence_type)
 		if not self.assigned_on:
 			self.assigned_on = now_datetime().date()
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
@@ -60,6 +64,7 @@ class WorkItem(Document):
 			if self.status == "Done":
 				create_sub_task(self, self.idx)
 
+		if self.recurrence_type == "Recurring Instance" and self.status == "Done":
 			self.create_work_item_recurrences()
 
 	@safe_exec
@@ -199,6 +204,12 @@ class WorkItem(Document):
 			create_work_item_recurrences(self, value[0], value[1])
 
 		frappe.db.commit()
+
+
+def is_end_date_not_in_past(date, type):
+	now = now_datetime()
+	if get_datetime(date) < now:
+		frappe.throw("End date cannot be in the past.")
 
 
 def _get_valid_dates(self, start_date, end_date):
@@ -358,10 +369,14 @@ def check_date_validity(self, valid_dates):
 						if not frappe.db.exists("Holiday", {"holiday_date": date, "parent": holiday_doc}):
 							break
 						date -= timedelta(days=1)
+				if _as_datetime(date, time) < now:
+					continue
 				if (date, time) not in dates and date <= get_datetime(self.repeat_until).date():
 					dates.append((date, time))
 		else:
 			for date, time in valid_dates:
+				if _as_datetime(date, time) < now:
+					continue
 				if date.weekday() <= skip_type:
 					dates.append((date, time))
 
