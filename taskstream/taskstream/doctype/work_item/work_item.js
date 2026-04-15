@@ -309,12 +309,33 @@ frappe.ui.form.on("Work Item", {
 		update_recurrence_description(frm);
 	},
 
+	recurring_task: function (frm) {
+		if (frm.doc.recurring_task === 1) {
+			frm.set_value("target_end_date", null);
+			frm.set_df_property("target_end_date", "read_only", 1);
+			const detailsTab = (frm.layout?.tabs || []).find(
+				(t) => t.df && (t.df.fieldname === "recurrence_tab" || t.label === "Recurrence")
+			);
+			if (detailsTab) {
+				detailsTab.set_active();
+			}
+		} else {
+			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
+			const detailsTab = (frm.layout?.tabs || []).find(
+				(t) => t.df && (t.df.fieldname === "details_tab" || t.label === "Details")
+			);
+			if (detailsTab) {
+				detailsTab.set_active();
+			}
+		}
+	},
+
 	review_required: function (frm) {
 		if (frm.doc.review_required && !frm.doc.reviewer) {
 			frm.set_df_property("reviewer", "reqd", frm.doc.review_required);
 		}
 		if (!frm.doc.review_required) {
-			frm.set_value("reviewer", "");
+			frm.set_value("reviewer", null);
 		}
 		frm.refresh_field("reviewer");
 	},
@@ -542,29 +563,31 @@ function update_recurrence_description(frm) {
 		return " in " + sorted.join(", ");
 	};
 
-	if (type === "Weekly" && !weekdays.length) {
-		const desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
-		frm.fields_dict.recurrence_frequency.set_description(desc);
-		frm.fields_dict.recurrence_day.set_description("");
-		return;
-	}
+	// if (type === "Weekly" && !weekdays.length) {
+	// 	const desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
+	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
+	// 	// frm.fields_dict.recurrence_day.set_description("");
+	// 	return;
+	// }
 
-	if (
-		type === "Monthly" &&
-		!(frm.doc.recurrence_date?.length || frm.doc.recurrence_day_occurrence?.length)
-	) {
-		const desc = `Every ${freq} month${freq > 1 ? "s" : ""}`;
-		frm.fields_dict.recurrence_frequency.set_description(desc);
-		frm.fields_dict.monthly_recurrence_based_on.set_description("");
-		return;
-	}
+	// if (
+	// 	type === "Monthly" &&
+	// 	!(frm.doc.recurrence_date?.length || frm.doc.recurrence_day_occurrence?.length)
+	// ) {
+	// 	const desc = `Every ${freq} month${freq > 1 ? "s" : ""}`;
+	// 	frm.set_value("recurrence_description", desc);
+	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
+	// 	// frm.fields_dict.monthly_recurrence_based_on.set_description("");
+	// 	return;
+	// }
 
-	if (type === "Yearly" && !months.length && !times.length) {
-		const desc = `Every ${freq} year${freq > 1 ? "s" : ""}`;
-		frm.fields_dict.recurrence_frequency.set_description(desc);
-		frm.fields_dict.recurrence_month.set_description("");
-		return;
-	}
+	// if (type === "Yearly" && !months.length && !times.length) {
+	// 	const desc = `Every ${freq} year${freq > 1 ? "s" : ""}`;
+	// 	frm.set_value("recurrence_description", desc);
+	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
+	// 	// frm.fields_dict.recurrence_month.set_description("");
+	// 	return;
+	// }
 
 	if (type === "Weekly") {
 		let desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
@@ -572,8 +595,9 @@ function update_recurrence_description(frm) {
 			desc += " on " + sorted_days.join(", ");
 		}
 		desc += formatTimes(times);
-		frm.fields_dict.recurrence_day.set_description(desc);
-		frm.fields_dict.recurrence_frequency.set_description("");
+		frm.set_value("recurrence_description", desc);
+		// frm.fields_dict.recurrence_details_column.set_description(desc);
+		// frm.fields_dict.recurrence_frequency.set_description("");
 		return;
 	}
 
@@ -583,7 +607,8 @@ function update_recurrence_description(frm) {
 
 		if (frm.doc.monthly_recurrence_based_on === "Date") {
 			desc += formatDates(dates) + formatTimes(times);
-			frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
+			// frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
+			frm.set_value("recurrence_description", desc);
 		} else if (frm.doc.monthly_recurrence_based_on === "Day") {
 			const occurrences = (frm.doc.recurrence_day_occurrence || []).map(
 				(d) => `${d.week_order} ${d.weekday}`
@@ -592,22 +617,26 @@ function update_recurrence_description(frm) {
 				desc += " on " + occurrences.join(", ");
 			}
 			desc += formatTimes(times);
-			frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
+			// frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
+			frm.set_value("recurrence_description", desc);
 		} else {
-			frm.fields_dict.recurrence_frequency.set_description(base);
-			frm.fields_dict.monthly_recurrence_based_on.set_description("");
+			frm.set_value("recurrence_description", desc);
+			// frm.fields_dict.recurrence_frequency.set_description(base);
+			// frm.fields_dict.monthly_recurrence_based_on.set_description("");
 		}
 
-		frm.fields_dict.recurrence_frequency.set_description("");
-		frm.fields_dict.recurrence_day?.set_description("");
+		// frm.fields_dict.recurrence_frequency.set_description("");
+		// frm.fields_dict.recurrence_day?.set_description("");
+		// frm.set_value("recurrence_description", "");
 		return;
 	}
 
 	if (type === "Yearly") {
 		let desc = `Every ${freq} year${freq > 1 ? "s" : ""}`;
 		desc += formatMonths(months) + formatDates(dates) + formatTimes(times);
-		frm.fields_dict.recurrence_month.set_description(desc);
-		frm.fields_dict.recurrence_frequency.set_description("");
+		// frm.fields_dict.recurrence_month.set_description(desc);
+		// frm.fields_dict.recurrence_frequency.set_description("");
+		frm.set_value("recurrence_description", desc);
 		return;
 	}
 }

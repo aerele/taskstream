@@ -6,6 +6,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "details_tab",
   "settings_section",
   "work_flow",
   "recurring_task",
@@ -43,13 +44,14 @@
   "recurrence_tab",
   "section_break_kqer",
   "recurrence_details_column",
+  "recurrence_description",
   "recurrence_type",
   "repeat_until",
   "recurrence_frequency",
   "recurrence_day",
   "monthly_recurrence_based_on",
   "recurrence_month",
-  "column_break_ekrr",
+  "column_break_iejr",
   "assigned_on",
   "actual_end_date",
   "section_break_lqwq",
@@ -361,15 +363,11 @@
    "label": "Benefit of Work Done (%)"
   },
   {
-   "depends_on": "eval: doc.recurrence_type == \"One Time\" || doc.recurrence_type == \"Recurring Instance\"",
+   "depends_on": "eval: doc.recurring_task === 0 || doc.recurrence_type == \"One Time\" || doc.recurrence_type == \"Recurring Instance\"",
    "fieldname": "target_end_date",
    "fieldtype": "Datetime",
    "label": "Target End Date",
    "mandatory_depends_on": "eval: doc.recurrence_type == \"One Time\" || doc.recurrence_type == \"Recurring Instance\""
-  },
-  {
-   "fieldname": "column_break_ekrr",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "actual_end_date",
@@ -424,13 +422,27 @@
    "fieldname": "recurring_task",
    "fieldtype": "Check",
    "label": "Recurring Task"
+  },
+  {
+   "fieldname": "recurrence_description",
+   "fieldtype": "Small Text",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_iejr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-13 16:21:21.844300",
+ "modified": "2026-04-15 17:01:29.992604",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

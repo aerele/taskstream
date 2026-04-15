@@ -3,6 +3,7 @@
 
 import json
 from datetime import datetime, time, timedelta
+from functools import wraps
 
 import frappe
 from frappe.model.document import Document
@@ -14,8 +15,28 @@ from taskstream.taskstream.doctype.work_item_score_summary.work_item_score_summa
 )
 
 
+def safe_exec(func):
+	@wraps(func)
+	def wrapper(*args, **kwargs):
+		try:
+			return func(*args, **kwargs)
+		except Exception as e:
+			try:
+				frappe.log_error(f"{e!s}", f"{func.__name__} Error")
+			except Exception:
+				pass
+			frappe.throw("An error occurred, please contact admin")
+
+	return wrapper
+
+
 class WorkItem(Document):
+	@safe_exec
 	def validate(self):
+		if self.recurrence_type == "One Time" or self.recurrence_type == "Recurring Instance":
+			is_end_date_not_in_past(self.target_end_date, self.recurrence_type)
+		else:
+			is_end_date_not_in_past(self.repeat_until, self.recurrence_type)
 		if not self.assigned_on:
 			self.assigned_on = now_datetime().date()
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
@@ -43,8 +64,10 @@ class WorkItem(Document):
 			if self.status == "Done":
 				create_sub_task(self, self.idx)
 
+		if self.recurrence_type == "Recurring Instance" and self.status == "Done":
 			self.create_work_item_recurrences()
 
+	@safe_exec
 	def create_work_item_recurrences(self):
 		if not (self.reference_document and self.reference_doctype):
 			return
@@ -98,10 +121,12 @@ class WorkItem(Document):
 					create_work_item_recurrences(self, next_date[0], next_date[1])
 					break
 
+	@safe_exec
 	def validate_reviewer(self):
 		if self.reviewer == self.assignee:
 			frappe.throw("Assignee and Reviewer cannot be same")
 
+	@safe_exec
 	def validate_recurrence_date(self):
 		seen = set()
 		for row in self.recurrence_date:
@@ -116,6 +141,7 @@ class WorkItem(Document):
 				frappe.throw("Each recurrence date must be unique!")
 			seen.add(val)
 
+	@safe_exec
 	def validate_recurrence_time(self):
 		seen = set()
 		for row in self.recurrence_time:
@@ -126,6 +152,7 @@ class WorkItem(Document):
 				frappe.throw("Each recurrence time must be unique!")
 			seen.add(val)
 
+	@safe_exec
 	def before_save(self):
 		old_doc = self.get_doc_before_save()
 		if not old_doc:
@@ -145,6 +172,7 @@ class WorkItem(Document):
 		if self.first_mail:
 			sent_noti(self.name)
 
+	@safe_exec
 	def after_insert(self):
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
 			return
@@ -176,6 +204,12 @@ class WorkItem(Document):
 			create_work_item_recurrences(self, value[0], value[1])
 
 		frappe.db.commit()
+
+
+def is_end_date_not_in_past(date, type):
+	now = now_datetime()
+	if get_datetime(date) < now:
+		frappe.throw("End date cannot be in the past.")
 
 
 def _get_valid_dates(self, start_date, end_date):
@@ -335,10 +369,14 @@ def check_date_validity(self, valid_dates):
 						if not frappe.db.exists("Holiday", {"holiday_date": date, "parent": holiday_doc}):
 							break
 						date -= timedelta(days=1)
+				if _as_datetime(date, time) < now:
+					continue
 				if (date, time) not in dates and date <= get_datetime(self.repeat_until).date():
 					dates.append((date, time))
 		else:
 			for date, time in valid_dates:
+				if _as_datetime(date, time) < now:
+					continue
 				if date.weekday() <= skip_type:
 					dates.append((date, time))
 
@@ -415,6 +453,7 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	return new_wi
 
 
+@safe_exec
 @frappe.whitelist()
 def send_for_review(docname, reviewer):
 	frappe.db.set_value("Work Item", docname, "status", "Under Review")
@@ -422,6 +461,7 @@ def send_for_review(docname, reviewer):
 	send_notifications(docname, content, to=[reviewer])
 
 
+@safe_exec
 @frappe.whitelist()
 def mark_complete(docname):
 	doc = frappe.get_doc("Work Item", docname)
@@ -442,6 +482,7 @@ def mark_complete(docname):
 # 	frappe.db.set_value("Work Item", docname, "first_mail", 1)
 
 
+@safe_exec
 @frappe.whitelist()
 def resend_for_rework(docname, rework_comments, target_end_date):
 	doc = frappe.get_doc("Work Item", docname)
@@ -462,6 +503,7 @@ def resend_for_rework(docname, rework_comments, target_end_date):
 	send_notifications(docname, content, to=[doc.assignee])
 
 
+@safe_exec
 def calculate_planned_target(doc):
 	# planned_end_time = None
 
@@ -480,6 +522,7 @@ def calculate_planned_target(doc):
 		doc.twenty_percent_reminder_sent = 0
 
 
+@safe_exec
 def ensure_time(value):
 	if isinstance(value, timedelta):
 		total_seconds = int(value.total_seconds())
@@ -533,6 +576,7 @@ def ensure_time(value):
 # 			frappe.log_error("Deadline Reminder Error", f"User {item.assignee} has no valid email.")
 
 
+@safe_exec
 def calculate_score(doc, type):
 	# if doc.is_new():
 	# 	return
@@ -613,6 +657,7 @@ def calculate_score(doc, type):
 		create_summary_record(doc.score_summary, doc.name, doc.score, type)
 
 
+@safe_exec
 @frappe.whitelist()
 def recalculate_score(docname):
 	doc = frappe.get_doc("Work Item", docname)
@@ -620,11 +665,13 @@ def recalculate_score(docname):
 	doc.save()
 
 
+@safe_exec
 def _get_benefit_penelty(benefit_of_work_done, completion_score):
 	benefit_of_work_done = 100 - float(benefit_of_work_done or 0)
 	return (benefit_of_work_done / 100) * completion_score
 
 
+@safe_exec
 @frappe.whitelist()
 def sent_noti(work_item):
 	doc = frappe.get_doc("Work Item", work_item)
@@ -647,6 +694,7 @@ def sent_noti(work_item):
 		send_notifications(doc.name, content, to)
 
 
+@safe_exec
 def create_sub_task(self, idx):
 	if frappe.db.exists("Work Flow Template Item", {"parent": self.work_flow_template, "idx": idx + 1}):
 		task = frappe.get_doc("Work Flow Template Item", {"parent": self.work_flow_template, "idx": idx + 1})
@@ -673,6 +721,7 @@ def create_sub_task(self, idx):
 		sent_noti(doc.name)
 
 
+@safe_exec
 @frappe.whitelist()
 def update_target_end_on_start_date_change(work_flow_template, start_date_time):
 	duration = frappe.get_value(
@@ -683,6 +732,7 @@ def update_target_end_on_start_date_change(work_flow_template, start_date_time):
 		return target_end.replace(second=0, microsecond=0)
 
 
+@safe_exec
 @frappe.whitelist()
 def time_extension_request(doc, reason, req_target_date_time):
 	doc = frappe.get_doc("Work Item", doc)
@@ -707,6 +757,7 @@ def time_extension_request(doc, reason, req_target_date_time):
 	send_notifications(doc.name, content, to, doctype="Work Item Time Extension", docname=ext_doc.name)
 
 
+@safe_exec
 @frappe.whitelist()
 def reassign(wi, new_assignee, current_assignee, reason):
 	reassign_doc = frappe.new_doc("Reassignment History")
@@ -726,6 +777,7 @@ def reassign(wi, new_assignee, current_assignee, reason):
 	send_notifications(wi, content, to, doctype=None, docname=None)
 
 
+@safe_exec
 @frappe.whitelist()
 def apply_updates_to_work_item(docname, updates, one_time=False, change_date=None):
 	updates = json.loads(updates)
@@ -738,6 +790,7 @@ def apply_updates_to_work_item(docname, updates, one_time=False, change_date=Non
 		_update_work_item(docname, updates)
 
 
+@safe_exec
 def _get_work_item(docname, change_date=None):
 	# query = """
 	#     SELECT DISTINCT wi.name
@@ -779,6 +832,7 @@ def _get_work_item(docname, change_date=None):
 		return frappe.db.sql(query, tuple(params))
 
 
+@safe_exec
 def _update_work_item(item_name, updates):
 	fields_restricted = ["status", "assignee", "reference_document", "reference_doctype", "recurrence_type"]
 	work_item = frappe.get_doc("Work Item", item_name)
@@ -804,17 +858,20 @@ def _update_work_item(item_name, updates):
 			work_item.after_insert()
 
 
+@safe_exec
 def _purge_work_item(docname):
 	work_items = _get_work_item(docname)
 	for item in work_items:
 		frappe.delete_doc("Work Item", item[0], force=True)
 
 
+@safe_exec
 @frappe.whitelist()
 def get_wft_data(wft):
 	return frappe.get_doc("Work Flow Template Item", {"parent": wft, "idx": 1})
 
 
+@safe_exec
 def score_summary(
 	delay_penalty,
 	rework_penalty,
