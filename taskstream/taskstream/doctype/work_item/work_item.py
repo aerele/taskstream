@@ -453,16 +453,16 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	return new_wi
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def send_for_review(docname, reviewer):
 	frappe.db.set_value("Work Item", docname, "status", "Under Review")
 	content = f"A work item <b>{docname}</b> has been sent for review.<br><a href='{frappe.utils.get_url()}/app/work-item/{docname}'>View Work Item</a>"
 	send_notifications(docname, content, to=[reviewer])
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def mark_complete(docname):
 	doc = frappe.get_doc("Work Item", docname)
 	if doc.benefit_of_work_done < 1 and doc.review_required == 1:
@@ -482,8 +482,8 @@ def mark_complete(docname):
 # 	frappe.db.set_value("Work Item", docname, "first_mail", 1)
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def resend_for_rework(docname, rework_comments, target_end_date):
 	doc = frappe.get_doc("Work Item", docname)
 	doc.status = "Open"
@@ -657,8 +657,8 @@ def calculate_score(doc, type):
 		create_summary_record(doc.score_summary, doc.name, doc.score, type)
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def recalculate_score(docname):
 	doc = frappe.get_doc("Work Item", docname)
 	calculate_score(doc, "Work Item")
@@ -671,8 +671,8 @@ def _get_benefit_penelty(benefit_of_work_done, completion_score):
 	return (benefit_of_work_done / 100) * completion_score
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def sent_noti(work_item):
 	doc = frappe.get_doc("Work Item", work_item)
 	to = []
@@ -721,8 +721,8 @@ def create_sub_task(self, idx):
 		sent_noti(doc.name)
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def update_target_end_on_start_date_change(work_flow_template, start_date_time):
 	duration = frappe.get_value(
 		"Work Flow Template Item", {"parent": work_flow_template, "idx": 1}, "target_end_date_time"
@@ -732,8 +732,8 @@ def update_target_end_on_start_date_change(work_flow_template, start_date_time):
 		return target_end.replace(second=0, microsecond=0)
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def time_extension_request(doc, reason, req_target_date_time):
 	doc = frappe.get_doc("Work Item", doc)
 	to = []
@@ -757,8 +757,8 @@ def time_extension_request(doc, reason, req_target_date_time):
 	send_notifications(doc.name, content, to, doctype="Work Item Time Extension", docname=ext_doc.name)
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def reassign(wi, new_assignee, current_assignee, reason):
 	reassign_doc = frappe.new_doc("Reassignment History")
 	reassign_doc.work_item_ref = wi
@@ -777,8 +777,8 @@ def reassign(wi, new_assignee, current_assignee, reason):
 	send_notifications(wi, content, to, doctype=None, docname=None)
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def apply_updates_to_work_item(docname, updates, one_time=False, change_date=None):
 	updates = json.loads(updates)
 	if one_time and change_date:
@@ -865,8 +865,8 @@ def _purge_work_item(docname):
 		frappe.delete_doc("Work Item", item[0], force=True)
 
 
-@safe_exec
 @frappe.whitelist()
+@safe_exec
 def get_wft_data(wft):
 	return frappe.get_doc("Work Flow Template Item", {"parent": wft, "idx": 1})
 
