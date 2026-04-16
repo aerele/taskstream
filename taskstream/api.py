@@ -36,3 +36,12 @@ def get_cycles(last_date, reporting_frequency, no_of_cycles, starting_date):
 		current_end = start - timedelta(days=1)
 
 	return list(cycles)
+
+
+@frappe.whitelist()
+def get_all_work_flow_template_tasks(wft):
+	return frappe.get_all(
+		"Work Flow Template Item",
+		filters={"parent": wft},
+		fields=["assignee", "task_name", "task_description", "idx", "target_end_date_time"],
+	)

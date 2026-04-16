@@ -16,6 +16,7 @@ frappe.ui.form.on("Work Item", {
 	refresh: function (frm) {
 		setup_two_col_layout(frm);
 		add_recalculate_score_button(frm);
+		set_wft_tasks(frm, frm.doc.work_flow_template);
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
 		const allowed = !(type === "One Time" || type === "Recurring Instance");
@@ -330,6 +331,18 @@ frappe.ui.form.on("Work Item", {
 		}
 	},
 
+	work_flow: function (frm) {
+		if (frm.doc.work_flow) {
+			set_active_tab(frm, "work_flow_tab", "Work Flow");
+			frm.set_value("target_end_date", null);
+			frm.set_df_property("target_end_date", "read_only", 1);
+		} else {
+			set_active_tab(frm, "details_tab", "Details");
+			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
+			frm.set_df_property("target_end_date", "read_only", 0);
+		}
+	},
+
 	review_required: function (frm) {
 		if (frm.doc.review_required && !frm.doc.reviewer) {
 			frm.set_df_property("reviewer", "reqd", frm.doc.review_required);
@@ -416,6 +429,7 @@ frappe.ui.form.on("Work Item", {
 	work_flow_template(frm) {
 		setup_work_flow_template(frm);
 		set_target_end_date_time(frm);
+		set_wft_tasks(frm, frm.doc.work_flow_template);
 	},
 
 	start_date_time(frm) {
@@ -1019,4 +1033,110 @@ function add_recalculate_score_button(frm) {
 	});
 
 	score_field.$wrapper.append($wrapper);
+}
+
+function set_active_tab(frm, tab_name, tab_label) {
+	const detailsTab = (frm.layout?.tabs || []).find(
+		(t) => t.df && (t.df.fieldname === tab_name || t.label === tab_label)
+	);
+	if (detailsTab) {
+		detailsTab.set_active();
+	}
+}
+
+function set_wft_tasks(frm, wft) {
+	if (!wft) {
+		if (frm.fields_dict.html_aseg && frm.fields_dict.html_aseg.$wrapper) {
+			frm.fields_dict.html_aseg.$wrapper.html("");
+		}
+		return;
+	}
+
+	frappe.call({
+		method: "taskstream.api.get_all_work_flow_template_tasks",
+		args: {
+			wft,
+		},
+		callback: function (r) {
+			if (!r.exc && r.message) {
+				const tasks = r.message;
+				let current_idx = frm.doc.idx || 0;
+				let html = `<div class="wi-lsec" style="margin-top: 15px; border: 1px solid var(--border-color, #e2e6ea); border-radius: 8px; overflow: hidden; background: var(--card-bg, #fff);">
+					<div class="wi-lsec-head" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color, #f0f1f3); background: var(--control-bg, #fbfcfd); display: flex; justify-content: space-between; align-items: center;">
+						<div style="font-size:11.5px;font-weight:600;color:var(--text-color, #1f272e);">Work Items in this Flow</div>
+						<span style="font-size:11.5px;font-weight:400;color:var(--text-muted, #8d99a5);">${tasks.length} steps</span>
+					</div>
+					<div style="display:flex;flex-direction:column;gap:0;">`;
+
+				tasks.forEach((t) => {
+					let dur = "";
+					if (t.target_end_date_time) {
+						let parts = String(t.target_end_date_time).split(":");
+						let hrs = parseInt(parts[0]) || 0;
+						let mins = parseInt(parts[1]) || 0;
+						if (hrs > 0) dur = `${hrs} hr${hrs !== 1 ? "s" : ""}`;
+						else if (mins > 0) dur = `${mins} min`;
+					}
+
+					let numClass = "wi-task-num";
+					let numText = t.idx || "";
+					let sPill = "";
+					let isCurrentPill = "";
+					let cardClass = "wi-task-card";
+
+					if (t.idx === current_idx) {
+						cardClass += " wi-current-task";
+						isCurrentPill = `<span style="font-size:10px; background:var(--control-bg, #f4f5f7); color:var(--text-color, #1f272e); padding:2px 6px; border-radius:12px; font-weight:600; border:1px solid var(--border-color, #e2e6ea);">Current</span>`;
+					}
+
+					if (t.idx < current_idx) {
+						numClass = "wi-task-num tn-done";
+						numText = "✓";
+						sPill = `<span class="wi-status-pill p-done"><span class="pill-dot"></span><span style="font-size:11px; margin-left: 4px;">Done</span></span>`;
+					} else if (t.idx === current_idx && frm.doc.status === "Done") {
+						numClass = "wi-task-num tn-done";
+						numText = "✓";
+						sPill = `<span class="wi-status-pill p-done"><span class="pill-dot"></span><span style="font-size:11px; margin-left: 4px;">Done</span></span>`;
+					} else if (
+						t.idx === current_idx ||
+						(t.idx === current_idx + 1 && frm.doc.status === "Done")
+					) {
+						numClass = "wi-task-num tn-ip";
+						sPill = `<span class="wi-status-pill p-ip"><span class="pill-dot"></span><span style="font-size:11px; margin-left: 4px;">Open</span></span>`;
+					} else {
+						sPill = `<span class="wi-status-pill p-todo"><span class="pill-dot"></span><span style="font-size:11px; margin-left: 4px;">Pending</span></span>`;
+					}
+
+					let assignee_name = frappe.user?.full_name
+						? frappe.user.full_name(t.assignee)
+						: t.assignee;
+					if (!assignee_name && t.assignee) assignee_name = t.assignee;
+
+					html += `<div class="${cardClass}">
+						<div class="${numClass}">${numText}</div>
+						<div class="wi-task-body">
+							<div class="wi-task-name">${t.task_name || ""}</div>
+							<div class="wi-task-desc">${t.task_description || ""}</div>
+							<div class="wi-task-meta">
+								<span class="wi-task-meta-item">
+									<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3z"/></svg>
+									${assignee_name || ""}
+								</span>
+								<span class="wi-task-meta-item">
+									<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5a.5.5 0 00-1 0V9a.5.5 0 00.252.434l3.5 2a.5.5 0 00.496-.868L8 8.71V3.5zM8 16A8 8 0 108 0a8 8 0 000 16z"/></svg>
+									${dur}
+								</span>
+							</div>
+						</div>
+						<div class="wi-task-status-col">${isCurrentPill}${sPill}</div>
+					</div>`;
+				});
+				html += `</div></div>`;
+
+				if (frm.fields_dict.html_aseg && frm.fields_dict.html_aseg.$wrapper) {
+					frm.fields_dict.html_aseg.$wrapper.html(html);
+				}
+			}
+		},
+	});
 }

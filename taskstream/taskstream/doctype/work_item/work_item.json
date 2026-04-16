@@ -13,10 +13,6 @@
   "review_required",
   "section_break_iwoa",
   "target_end_date",
-  "section_break_gnhu",
-  "work_flow_template",
-  "column_break_nvbq",
-  "start_date_time",
   "people_section",
   "requester",
   "reporter",
@@ -41,6 +37,15 @@
   "valid_dates",
   "status",
   "first_mail",
+  "work_flow_tab",
+  "section_break_gnhu",
+  "work_flow_template",
+  "column_break_nvbq",
+  "start_date_time",
+  "section_break_mlbj",
+  "tasks",
+  "section_break_aljj",
+  "html_aseg",
   "recurrence_tab",
   "section_break_kqer",
   "recurrence_details_column",
@@ -264,6 +269,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.recurring_task ===0",
    "fieldname": "work_flow",
    "fieldtype": "Check",
    "label": "Work Flow"
@@ -419,6 +425,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.work_flow ===0",
    "fieldname": "recurring_task",
    "fieldtype": "Check",
    "label": "Recurring Task"
@@ -436,13 +443,38 @@
    "fieldname": "details_tab",
    "fieldtype": "Tab Break",
    "label": "Details"
+  },
+  {
+   "depends_on": "eval: doc.work_flow === 1",
+   "fieldname": "work_flow_tab",
+   "fieldtype": "Tab Break",
+   "label": "Work Flow"
+  },
+  {
+   "fieldname": "section_break_mlbj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "tasks",
+   "fieldtype": "Table",
+   "label": "Tasks",
+   "options": "Work Flow Template Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_aljj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "html_aseg",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-15 17:01:29.992604",
+ "modified": "2026-04-16 13:49:36.552232",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
