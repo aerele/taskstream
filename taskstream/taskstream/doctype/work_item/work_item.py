@@ -22,7 +22,7 @@ def safe_exec(func):
 			return func(*args, **kwargs)
 		except Exception as e:
 			try:
-				frappe.log_error(f"{e!s}", f"{func.__name__} Error")
+				frappe.log_error(message=f"{e!s}", title=f"{func.__name__} Error")
 			except Exception:
 				pass
 			frappe.throw("An error occurred, please contact admin")
