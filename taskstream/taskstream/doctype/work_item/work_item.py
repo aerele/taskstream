@@ -22,7 +22,7 @@ def safe_exec(func):
 			return func(*args, **kwargs)
 		except Exception as e:
 			try:
-				frappe.log_error(f"{e!s}", f"{func.__name__} Error")
+				frappe.log_error(message=f"{e!s}", title=f"{func.__name__} Error")
 			except Exception:
 				pass
 			frappe.throw("An error occurred, please contact admin")
@@ -96,25 +96,15 @@ class WorkItem(Document):
 			for next_date in valid_dates[current_index + 1 :]:
 				target_end_datetime = datetime.combine(next_date[0], datetime.min.time()) + next_date[1]
 				existing_wi = bool(
-					frappe.db.sql(
-						"""
-						SELECT 1
-						FROM `tabWork Item` wi
-						WHERE wi.reference_document = %s
-							AND wi.reference_doctype = %s
-							AND wi.summary = %s
-							AND wi.description = %s
-							AND wi.rework_count = 0
-							AND wi.target_end_date = %s
-						LIMIT 1
-						""",
-						(
-							self.reference_document,
-							self.reference_doctype,
-							self.summary,
-							self.description,
-							target_end_datetime,
-						),
+					frappe.db.exists(
+						"Work Item",
+						{
+							"reference_document": self.reference_document,
+							"reference_doctype": self.reference_doctype,
+							"target_end_date": target_end_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+							"summary": self.summary,
+							"description": self.description,
+						},
 					)
 				)
 				if not existing_wi:
@@ -423,7 +413,7 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	new_wi.rework_count = 0
 	new_wi.revision_count = 0
 	new_wi.recurrence_frequency = 0
-	new_wi.benefit_of_work_done = 0
+	new_wi.benefit_of_work_done = 100
 	new_wi.recurrence_type = "Recurring Instance"
 	new_wi.recurrence_date = []
 	new_wi.recurrence_time = []
@@ -447,7 +437,9 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	new_wi.target_end_date = datetime.combine(date, datetime.min.time()) + time_delta
 	new_wi.status = "Open"
 	new_wi.reference_doctype = "Work Item"
-	new_wi.reference_document = wi_doc.name
+	new_wi.reference_document = (
+		wi_doc.reference_document if wi_doc.recurrence_type == "Recurring Instance" else wi_doc.name
+	)
 	new_wi.owner = wi_doc.owner
 	new_wi.save(ignore_permissions=True)
 	return new_wi

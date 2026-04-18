@@ -216,6 +216,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval: doc.rework_count > 0",
    "fieldname": "rework_count",
    "fieldtype": "Int",
    "label": "Rework Count",
@@ -258,6 +259,7 @@
    "label": "Valid Dates"
   },
   {
+   "depends_on": "eval: doc.revision_count > 0",
    "fieldname": "revision_count",
    "fieldtype": "Int",
    "label": "Revision Count",
@@ -334,6 +336,7 @@
    "label": "Score"
   },
   {
+   "depends_on": "eval: doc.score > 0",
    "fieldname": "score",
    "fieldtype": "Float",
    "label": "Score",
@@ -474,7 +477,7 @@
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-16 13:49:36.552232",
+ "modified": "2026-04-17 16:47:31.493882",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
