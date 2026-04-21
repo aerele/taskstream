@@ -14,6 +14,8 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	refresh: function (frm) {
+		frm.page.sidebar.hide();
+		$(frm.page.wrapper).find(".sidebar-toggle-btn").hide();
 		setup_two_col_layout(frm);
 		add_recalculate_score_button(frm);
 		set_wft_tasks(frm, frm.doc.work_flow_template);

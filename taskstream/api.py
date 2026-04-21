@@ -11,7 +11,7 @@ def delete_file_if_exists(file_name):
 	frappe.delete_doc("File", file_name, ignore_permissions=True)
 
 
-def _get_reporting_window():
+def get_reporting_window():
 	last_executed_on, reporting_frequency = frappe.db.get_value(
 		"Work Item Configuration", "Work Item Configuration", ["last_executed_on", "reporting_frequency"]
 	)

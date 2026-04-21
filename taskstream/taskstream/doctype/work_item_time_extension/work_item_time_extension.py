@@ -25,5 +25,6 @@ def update_status(docname, status):
 		wi_doc = frappe.get_doc("Work Item", wit.work_item_reference)
 		# wi_doc.append("activities", {"action_type": "Target End Date", "time": wit.requested_due_date})
 		wi_doc.target_end_date = wit.requested_due_date
+		wi_doc.revision_count += 1
 		wi_doc.save()
 	wit.save()

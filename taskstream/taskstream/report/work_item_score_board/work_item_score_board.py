@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Chethan - Aerele and contributors
 # For license information, please see license.txt
 
+import urllib.parse
 from collections import defaultdict
 
 import frappe
@@ -32,7 +33,7 @@ def get_columns(cycle_dates):
 			"width": 360,
 			"indent_based_on": "indent",
 		},
-		{"label": "Score", "fieldname": "score", "fieldtype": "Float", "width": 300},
+		{"label": "Current Score", "fieldname": "score", "fieldtype": "Data", "width": 300},
 	]
 	for cycle in cycle_dates:
 		columns.append({"label": f"{cycle}", "fieldname": f"score_{cycle}", "fieldtype": "Data"})
@@ -71,22 +72,36 @@ def get_data(filters=None, cycle_dates=None):
 		try:
 			cycle_scores_raw = frappe.get_all(
 				"Work Item Score Summary",
-				filters={"report_cycle": ("in", cycle_dates)},
-				fields=["assignee", "report_cycle", "score"],
+				filters={"report_cycle": ("in", cycle_dates), "action": "Reporting Window"},
+				fields=["assignee", "report_cycle", "score", "work_item"],
 			)
 		except Exception:
 			cycle_scores_raw = []
 
 	# Build per-user per-cycle totals and counts
-	user_cycle_stats = defaultdict(lambda: defaultdict(lambda: {"total": 0.0, "count": 0}))
+	user_cycle_wi_scores = defaultdict(lambda: defaultdict(dict))
 	for rec in cycle_scores_raw:
 		assignee = rec.get("assignee")
 		cycle = rec.get("report_cycle")
 		score = rec.get("score") or 0.0
-		if not assignee or not cycle:
+		work_item = rec.get("work_item")
+
+		if not assignee or not cycle or not work_item:
 			continue
-		user_cycle_stats[assignee][cycle]["total"] += score
-		user_cycle_stats[assignee][cycle]["count"] += 1
+
+		if work_item not in user_cycle_wi_scores[assignee][cycle]:
+			user_cycle_wi_scores[assignee][cycle][work_item] = score
+		else:
+			user_cycle_wi_scores[assignee][cycle][work_item] = max(
+				user_cycle_wi_scores[assignee][cycle][work_item], score
+			)
+
+	user_cycle_stats = defaultdict(lambda: defaultdict(lambda: {"total": 0.0, "count": 0}))
+	for assignee, cycles in user_cycle_wi_scores.items():
+		for cycle, wi_scores in cycles.items():
+			for max_score in wi_scores.values():
+				user_cycle_stats[assignee][cycle]["total"] += max_score
+				user_cycle_stats[assignee][cycle]["count"] += 1
 
 	erpnext_with_employee = is_erpnext_installed()
 	rows = (
@@ -116,11 +131,20 @@ def build_average_rows(rows, cycle_dates=None, user_cycle_stats=None):
 		row_data = {
 			"user": row.get("user"),
 			"user_id": user_id,
-			"score": (total_score / count) if count else 0,
+			"score": round(total_score / count, 0) if count else 0,
 		}
 		for cycle in cycle_dates:
 			stats = user_cycle_stats.get(user_id, {}).get(cycle, {"total": 0.0, "count": 0})
-			row_data[f"score_{cycle}"] = (stats["total"] / stats["count"]) if stats["count"] else 0
+			score_val = round(stats["total"] / stats["count"], 0) if stats["count"] else 0
+			if user_id and stats["count"]:
+				url_params = urllib.parse.urlencode(
+					{"assignee": user_id, "report_cycle": cycle, "action": "Reporting Window"}
+				)
+				row_data[f"score_{cycle}"] = (
+					f"<a href='/app/work-item-score-summary?{url_params}' target='_blank'>{score_val}</a>"
+				)
+			else:
+				row_data[f"score_{cycle}"] = score_val
 
 		avg_rows.append(row_data)
 	return avg_rows
@@ -151,11 +175,11 @@ def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
 		employee_name = employee.get("name")
 		employee_user = employee.get("user_id")
 		employee_display = (
-			employee_user
+			employee.get("employee_name")
 			or employee.get("company_email")
 			or employee.get("personal_email")
-			or employee.get("employee_name")
 			or employee_name
+			or employee_user
 		)
 		reports_to = employee.get("reports_to")
 		if not employee_name:
@@ -210,7 +234,7 @@ def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
 		return memo[employee_name]
 
 	def to_score(total_score, work_item_count):
-		return (total_score / work_item_count) if work_item_count else 0
+		return round(total_score / work_item_count, 0) if work_item_count else 0
 
 	def make_row(user, user_id, total_score, work_item_count, indent, is_group, cycle_values=None):
 		row = {
@@ -223,7 +247,16 @@ def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
 		cycle_values = cycle_values or {}
 		for cycle in cycle_dates:
 			c = cycle_values.get(cycle, {"total": 0.0, "count": 0})
-			row[f"score_{cycle}"] = to_score(c.get("total", 0.0), c.get("count", 0))
+			score_val = to_score(c.get("total", 0.0), c.get("count", 0))
+			if user_id and not is_group and c.get("count", 0):
+				url_params = urllib.parse.urlencode(
+					{"assignee": user_id, "report_cycle": cycle, "action": "Reporting Window"}
+				)
+				row[f"score_{cycle}"] = (
+					f"<a href='/app/work-item-score-summary?{url_params}' target='_blank'>{score_val}</a>"
+				)
+			else:
+				row[f"score_{cycle}"] = score_val
 		return row
 
 	def get_user_stats(employee_user):
@@ -265,7 +298,7 @@ def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
 			if employee_user:
 				rows.append(
 					make_row(
-						user=employee_user,
+						user=employee_display_by_name.get(employee_name) or employee_user,
 						user_id=employee_user,
 						total_score=own_stats["total_score"],
 						work_item_count=own_stats["work_item_count"],
@@ -283,7 +316,7 @@ def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
 			# leaf employee row
 			rows.append(
 				make_row(
-					user=employee_user,
+					user=employee_display_by_name.get(employee_name) or employee_user,
 					user_id=employee_user,
 					total_score=own_stats["total_score"],
 					work_item_count=own_stats["work_item_count"],
