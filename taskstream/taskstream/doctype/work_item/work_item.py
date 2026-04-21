@@ -20,9 +20,9 @@ def safe_exec(func):
 	def wrapper(*args, **kwargs):
 		try:
 			return func(*args, **kwargs)
-		except Exception as e:
+		except Exception:
 			try:
-				frappe.log_error(message=f"{e!s}", title=f"{func.__name__} Error")
+				frappe.log_error(message=frappe.get_traceback(), title=f"{func.__name__} Error")
 			except Exception:
 				pass
 			frappe.throw("An error occurred, please contact admin")
@@ -33,10 +33,11 @@ def safe_exec(func):
 class WorkItem(Document):
 	@safe_exec
 	def validate(self):
-		if self.recurrence_type == "One Time" or self.recurrence_type == "Recurring Instance":
-			is_end_date_not_in_past(self.target_end_date, self.recurrence_type)
-		else:
-			is_end_date_not_in_past(self.repeat_until, self.recurrence_type)
+		if self.is_new():
+			if self.recurrence_type == "One Time" or self.recurrence_type == "Recurring Instance":
+				is_end_date_not_in_past(self.target_end_date)
+			else:
+				is_end_date_not_in_past(self.repeat_until)
 		if not self.assigned_on:
 			self.assigned_on = now_datetime().date()
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
