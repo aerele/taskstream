@@ -13,6 +13,7 @@
   "review_required",
   "section_break_iwoa",
   "target_end_date",
+  "actual_end_date",
   "people_section",
   "requester",
   "reporter",
@@ -58,7 +59,6 @@
   "recurrence_month",
   "column_break_iejr",
   "assigned_on",
-  "actual_end_date",
   "section_break_lqwq",
   "recurrence_date",
   "recurrence_day_occurrence",
@@ -336,7 +336,7 @@
    "label": "Score"
   },
   {
-   "depends_on": "eval: doc.score > 0",
+   "depends_on": "eval: doc.score != 0",
    "fieldname": "score",
    "fieldtype": "Float",
    "label": "Score",
@@ -396,6 +396,7 @@
    "fieldtype": "Section Break"
   },
   {
+   "depends_on": "eval: doc.score != 0",
    "fieldname": "score_summary",
    "fieldtype": "Long Text",
    "label": "Score Summary",
@@ -474,10 +475,9 @@
   }
  ],
  "grid_page_length": 50,
- "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-17 16:47:31.493882",
+ "modified": "2026-04-20 17:48:51.625648",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

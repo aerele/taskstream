@@ -196,7 +196,7 @@ class WorkItem(Document):
 		frappe.db.commit()
 
 
-def is_end_date_not_in_past(date, type):
+def is_end_date_not_in_past(date):
 	now = now_datetime()
 	if get_datetime(date) < now:
 		frappe.throw("End date cannot be in the past.")
@@ -435,6 +435,7 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	# 	},
 	# )
 	new_wi.target_end_date = datetime.combine(date, datetime.min.time()) + time_delta
+	new_wi.actual_end_date = None
 	new_wi.status = "Open"
 	new_wi.reference_doctype = "Work Item"
 	new_wi.reference_document = (
@@ -887,12 +888,12 @@ def score_summary(
 ):
 	delay_hours = delay_time / 60
 
-	summary = "Delay Penalty          : " + str(delay_penalty) + " <br>"
-	summary += "Revision Penalty       : " + str(revision_penalty) + " <br>"
-	summary += "Rework Penalty         : " + str(rework_penalty) + " <br>"
-	summary += "Benefit Penalty        : " + str(benefit_penalty) + " <br>"
+	summary = "Delay Penalty          : " + str(round(delay_penalty, 2)) + " <br>"
+	summary += "Revision Penalty       : " + str(round(revision_penalty, 2)) + " <br>"
+	summary += "Rework Penalty         : " + str(round(rework_penalty, 2)) + " <br>"
+	summary += "Benefit Penalty        : " + str(round(benefit_penalty, 2)) + " <br>"
 	summary += "-----------------------------" + " <br>"
-	summary += "Total Penalty          : " + str(total_penalty) + " <br>"
+	summary += "Total Penalty          : " + str(round(total_penalty, 2)) + " <br>"
 	summary += "-----------------------------" + " <br>"
 
 	summary += "<b><u>Delay Penalty Breakdown</u></b>" + " <br>"
@@ -908,9 +909,9 @@ def score_summary(
 		"Delay Penalty: ("
 		+ str(round(delay_hours, 2))
 		+ " * 60 * "
-		+ str(ppm)
+		+ str(round(ppm, 2))
 		+ ") = "
-		+ str(round(delay_hours * 60 * ppm, 2))
+		+ str(round(delay_hours * 60 * round(ppm, 2), 2))
 		+ " or "
 		+ str(round(max_delay_points, 2))
 		+ "(Whichever is lowest)"

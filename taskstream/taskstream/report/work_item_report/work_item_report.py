@@ -40,8 +40,9 @@ def get_columns(cycle_dates):
 		{"label": "Status", "fieldname": "status", "fieldtype": "Data"},
 		{"label": "Reference", "fieldname": "reference", "fieldtype": "Link", "options": "Work Item"},
 		{"label": "Expected Target Date", "fieldname": "target_date", "fieldtype": "Datetime"},
+		{"label": "Actual Target Date", "fieldname": "actual_date", "fieldtype": "Datetime"},
 		{"label": "Delay in Days", "fieldname": "delay_in_days", "fieldtype": "Int"},
-		{"label": "Completion Percentage", "fieldname": "completion_percentage", "fieldtype": "Percentage"},
+		{"label": "Benefit of Work Done", "fieldname": "benefit_of_work_done", "fieldtype": "Percentage"},
 	]
 	for cycle in cycle_dates:
 		columns.append({"label": f"{cycle}", "fieldname": f"score_{cycle}", "fieldtype": "Data"})
@@ -97,7 +98,7 @@ def get_data(filters=None, cycle_dates=None, no_of_cycles=0):
 		anchor_time = actual_end if (row.get("status") == "Done" and actual_end) else now
 		delay_days = (anchor_time - target_date).days if anchor_time > target_date else 0
 
-		completion_percentage = 100 if row.get("status") == "Done" else (row.get("benefit_of_work_done") or 0)
+		benefit_of_work_done = 100 if row.get("status") == "Done" else (row.get("benefit_of_work_done") or 0)
 		reference = row.get("reference_document") if row.get("reference_doctype") == "Work Item" else None
 
 		result_row = {
@@ -109,8 +110,9 @@ def get_data(filters=None, cycle_dates=None, no_of_cycles=0):
 			"status": row.get("status"),
 			"reference": reference,
 			"target_date": target_date,
+			"actual_date": actual_end,
 			"delay_in_days": delay_days,
-			"completion_percentage": completion_percentage,
+			"benefit_of_work_done": benefit_of_work_done,
 		}
 
 		# Fetch Work Item Summary records for this work item
@@ -124,7 +126,7 @@ def get_data(filters=None, cycle_dates=None, no_of_cycles=0):
 					work_item_summary.report_cycle,
 				)
 				.where(work_item_summary.work_item == row.get("work_item"))
-				.where(work_item_summary.generated_from == "Reporting Window")
+				.where(work_item_summary.action == "Reporting Window")
 				.where(work_item_summary.report_cycle.isnotnull())
 				.where(work_item_summary.report_cycle.isin(cycle_dates))
 				.orderby(work_item_summary.creation)
