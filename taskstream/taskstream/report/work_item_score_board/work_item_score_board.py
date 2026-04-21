@@ -7,7 +7,7 @@ from collections import defaultdict
 import frappe
 from frappe.query_builder import DocType
 from frappe.query_builder.functions import Coalesce, Count, Sum
-from frappe.utils import get_datetime, getdate
+from frappe.utils import add_days, get_datetime, getdate, now_datetime
 
 from taskstream.api import get_cycles
 
@@ -42,14 +42,23 @@ def get_columns(cycle_dates):
 
 def get_data(filters=None, cycle_dates=None):
 	filters = filters or {}
-	from_date = filters.get("from_date") or frappe.utils.add_months(frappe.utils.today(), -1)
-	to_date = filters.get("to_date") or frappe.utils.today()
-	user = filters.get("user")
+	# from_date = filters.get("from_date") or frappe.utils.add_months(frappe.utils.today(), -1)
+	# to_date = filters.get("to_date") or frappe.utils.today()
+	roles = frappe.get_roles(frappe.session.user)
+	if any(role in ["System Manager", "Work Item Admin"] for role in roles):
+		user = None
+	else:
+		user = frappe.session.user
 
 	work_item = DocType("Work Item")
-
-	start_dt = get_datetime(getdate(from_date))
-	end_dt = get_datetime(getdate(to_date)).replace(hour=23, minute=59, second=59, microsecond=999999)
+	current_datetime = now_datetime()
+	last_executed_on, reporting_frequency = frappe.db.get_value(
+		"Work Item Configuration", "Work Item Configuration", ["last_executed_on", "reporting_frequency"]
+	)
+	start_dt = add_days(last_executed_on, 1)
+	end_dt = add_days(last_executed_on, int(reporting_frequency))
+	start_dt = get_datetime(getdate(start_dt))
+	end_dt = get_datetime(getdate(end_dt)).replace(hour=23, minute=59, second=59, microsecond=999999)
 
 	query = (
 		frappe.qb.from_(work_item)
@@ -58,10 +67,12 @@ def get_data(filters=None, cycle_dates=None):
 			Sum(Coalesce(work_item.score, 0)).as_("total_score"),
 			Count(work_item.name).as_("work_item_count"),
 		)
-		.where(work_item.target_end_date.between(start_dt, end_dt))
+		.where(
+			((work_item.actual_end_date.between(start_dt, end_dt)) & (work_item.status == "Done"))
+			| ((work_item.target_end_date < current_datetime) & (work_item.status == "Open"))
+		)
 		.groupby(work_item.assignee)
 		.orderby(work_item.assignee)
-		.where(work_item.status == "Done")
 	)
 
 	base_rows = query.run(as_dict=True)
