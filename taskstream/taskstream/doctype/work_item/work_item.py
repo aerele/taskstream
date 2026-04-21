@@ -20,9 +20,9 @@ def safe_exec(func):
 	def wrapper(*args, **kwargs):
 		try:
 			return func(*args, **kwargs)
-		except Exception as e:
+		except Exception:
 			try:
-				frappe.log_error(message=f"{e!s}", title=f"{func.__name__} Error")
+				frappe.log_error(message=frappe.get_traceback(), title=f"{func.__name__} Error")
 			except Exception:
 				pass
 			frappe.throw("An error occurred, please contact admin")
@@ -33,10 +33,11 @@ def safe_exec(func):
 class WorkItem(Document):
 	@safe_exec
 	def validate(self):
-		if self.recurrence_type == "One Time" or self.recurrence_type == "Recurring Instance":
-			is_end_date_not_in_past(self.target_end_date, self.recurrence_type)
-		else:
-			is_end_date_not_in_past(self.repeat_until, self.recurrence_type)
+		if self.is_new():
+			if self.recurrence_type == "One Time" or self.recurrence_type == "Recurring Instance":
+				is_end_date_not_in_past(self.target_end_date)
+			else:
+				is_end_date_not_in_past(self.repeat_until)
 		if not self.assigned_on:
 			self.assigned_on = now_datetime().date()
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
@@ -57,7 +58,7 @@ class WorkItem(Document):
 		if self.status == "Open":
 			calculate_planned_target(self)
 
-		calculate_score(self, "Work Item")
+		calculate_score(self, "Work Item Update")
 		if self.work_flow_template:
 			if self.idx == 0:
 				self.idx = 1
@@ -639,9 +640,9 @@ def calculate_score(doc, type):
 		benefit_of_work_done=doc.benefit_of_work_done,
 		completion_score=config.completion_score,
 	)
-	# run create_summary_record if type = Reporting Window or if there are changes in score, status, rework_count, revision_count, target_end_date (check with data before save)
-	if type == "Reporting Window" or (
-		type == "Work Item"
+	# run create_summary_record if type = Scheduled Job or if there are changes in score, status, rework_count, revision_count, target_end_date (check with data before save)
+	if type == "Scheduled Job" or (
+		type == "Work Item Update"
 		and any(
 			doc.has_value_changed(f)
 			for f in ("score", "status", "rework_count", "revision_count", "target_end_date")
@@ -654,7 +655,7 @@ def calculate_score(doc, type):
 @safe_exec
 def recalculate_score(docname):
 	doc = frappe.get_doc("Work Item", docname)
-	calculate_score(doc, "Work Item")
+	calculate_score(doc, "Work Item Update")
 	doc.save()
 
 

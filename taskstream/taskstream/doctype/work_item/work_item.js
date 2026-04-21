@@ -1062,6 +1062,7 @@ function set_wft_tasks(frm, wft) {
 		callback: function (r) {
 			if (!r.exc && r.message) {
 				const tasks = r.message;
+				tasks.sort((a, b) => (a.idx || 0) - (b.idx || 0));
 				let current_idx = frm.doc.idx || 0;
 				let html = `<div class="wi-lsec" style="margin-top: 15px; border: 1px solid var(--border-color, #e2e6ea); border-radius: 8px; overflow: hidden; background: var(--card-bg, #fff);">
 					<div class="wi-lsec-head" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color, #f0f1f3); background: var(--control-bg, #fbfcfd); display: flex; justify-content: space-between; align-items: center;">

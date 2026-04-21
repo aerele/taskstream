@@ -7,12 +7,15 @@ from frappe.utils import now_datetime
 
 
 class WorkItemTimeExtension(Document):
-	pass
+	def after_insert(self):
+		if self.approver and any(row.user == self.requester for row in self.approver):
+			update_status(self.work_item_reference, "Approved", self)
 
 
 @frappe.whitelist()
-def update_status(docname, status):
-	wit = frappe.get_doc("Work Item Time Extension", docname)
+def update_status(docname, status, wit=None):
+	if not wit:
+		wit = frappe.get_doc("Work Item Time Extension", docname)
 	if frappe.get_value("Work Item", wit.work_item_reference, "status") == "Done":
 		frappe.db.set_value("Work Item Time Extension", docname, "status", "Rejected")
 		frappe.msgprint("Work Item is already closed")

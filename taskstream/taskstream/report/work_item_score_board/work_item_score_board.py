@@ -72,7 +72,7 @@ def get_data(filters=None, cycle_dates=None):
 		try:
 			cycle_scores_raw = frappe.get_all(
 				"Work Item Score Summary",
-				filters={"report_cycle": ("in", cycle_dates), "action": "Reporting Window"},
+				filters={"report_cycle": ("in", cycle_dates), "action": "Scheduled Job"},
 				fields=["assignee", "report_cycle", "score", "work_item"],
 			)
 		except Exception:
@@ -138,7 +138,7 @@ def build_average_rows(rows, cycle_dates=None, user_cycle_stats=None):
 			score_val = round(stats["total"] / stats["count"], 0) if stats["count"] else 0
 			if user_id and stats["count"]:
 				url_params = urllib.parse.urlencode(
-					{"assignee": user_id, "report_cycle": cycle, "action": "Reporting Window"}
+					{"assignee": user_id, "report_cycle": cycle, "action": "Scheduled Job"}
 				)
 				row_data[f"score_{cycle}"] = (
 					f"<a href='/app/work-item-score-summary?{url_params}' target='_blank'>{score_val}</a>"
@@ -250,7 +250,7 @@ def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
 			score_val = to_score(c.get("total", 0.0), c.get("count", 0))
 			if user_id and not is_group and c.get("count", 0):
 				url_params = urllib.parse.urlencode(
-					{"assignee": user_id, "report_cycle": cycle, "action": "Reporting Window"}
+					{"assignee": user_id, "report_cycle": cycle, "action": "Scheduled Job"}
 				)
 				row[f"score_{cycle}"] = (
 					f"<a href='/app/work-item-score-summary?{url_params}' target='_blank'>{score_val}</a>"
