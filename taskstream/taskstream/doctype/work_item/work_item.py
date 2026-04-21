@@ -57,7 +57,7 @@ class WorkItem(Document):
 		if self.status == "Open":
 			calculate_planned_target(self)
 
-		calculate_score(self, "Work Item")
+		calculate_score(self, "Work Item Update")
 		if self.work_flow_template:
 			if self.idx == 0:
 				self.idx = 1
@@ -639,9 +639,9 @@ def calculate_score(doc, type):
 		benefit_of_work_done=doc.benefit_of_work_done,
 		completion_score=config.completion_score,
 	)
-	# run create_summary_record if type = Reporting Window or if there are changes in score, status, rework_count, revision_count, target_end_date (check with data before save)
-	if type == "Reporting Window" or (
-		type == "Work Item"
+	# run create_summary_record if type = Scheduled Job or if there are changes in score, status, rework_count, revision_count, target_end_date (check with data before save)
+	if type == "Scheduled Job" or (
+		type == "Work Item Update"
 		and any(
 			doc.has_value_changed(f)
 			for f in ("score", "status", "rework_count", "revision_count", "target_end_date")
@@ -654,7 +654,7 @@ def calculate_score(doc, type):
 @safe_exec
 def recalculate_score(docname):
 	doc = frappe.get_doc("Work Item", docname)
-	calculate_score(doc, "Work Item")
+	calculate_score(doc, "Work Item Update")
 	doc.save()
 
 

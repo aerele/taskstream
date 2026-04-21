@@ -34,7 +34,7 @@ def get_report_data():
 	for work_item in work_items:
 		try:
 			wi = frappe.get_doc("Work Item", work_item.name)
-			calculate_score(wi, "Reporting Window")
+			calculate_score(wi, "Scheduled Job")
 			wi.save()
 		except Exception as e:
 			frappe.log_error(

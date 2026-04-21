@@ -62,7 +62,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Action",
-   "options": "Work Item\nReporting Window",
+   "options": "Work Item Update\nScheduled Job",
    "read_only": 1
   }
  ],
@@ -70,7 +70,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-20 18:51:55.648954",
+ "modified": "2026-04-21 11:28:11.005696",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Score Summary",

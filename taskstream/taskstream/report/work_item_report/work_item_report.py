@@ -126,7 +126,7 @@ def get_data(filters=None, cycle_dates=None, no_of_cycles=0):
 					work_item_summary.report_cycle,
 				)
 				.where(work_item_summary.work_item == row.get("work_item"))
-				.where(work_item_summary.action == "Reporting Window")
+				.where(work_item_summary.action == "Scheduled Job")
 				.where(work_item_summary.report_cycle.isnotnull())
 				.where(work_item_summary.report_cycle.isin(cycle_dates))
 				.orderby(work_item_summary.creation)

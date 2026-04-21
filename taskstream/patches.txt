@@ -8,3 +8,4 @@ taskstream.patches.install #5
 taskstream.patches.wi_target_end_date
 taskstream.patches.wi_status_to_open
 taskstream.patches.get_action_in_wiss
+taskstream.patches.update_wiss_action_values
