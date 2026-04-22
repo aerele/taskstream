@@ -45,3 +45,11 @@ def get_all_work_flow_template_tasks(wft):
 		filters={"parent": wft},
 		fields=["assignee", "task_name", "task_description", "idx", "target_end_date_time"],
 	)
+
+
+def clear_employee_cache():
+	from taskstream.taskstream.report.work_item_score_board.work_item_score_board import (
+		_fetch_employees_active,
+	)
+
+	_fetch_employees_active.cache_clear()

@@ -174,6 +174,7 @@ scheduler_events = {
 	"daily": [
 		"taskstream.taskstream.tasks.report_data.get_report_data",
 	],
+	"weekly": ["taskstream.api.clear_employee_cache"],
 	"cron": {
 		"* * * * *": [
 			"taskstream.taskstream.doctype.work_item.work_item.send_twenty_percent_reminders",
