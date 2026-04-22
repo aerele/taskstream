@@ -46,7 +46,7 @@ def get_data(filters=None, cycle_dates=None):
 	# to_date = filters.get("to_date") or frappe.utils.today()
 	roles = frappe.get_roles(frappe.session.user)
 	if any(role in ["System Manager", "Work Item Admin"] for role in roles):
-		user = None
+		user = filters.get("user") or None
 	else:
 		user = frappe.session.user
 
