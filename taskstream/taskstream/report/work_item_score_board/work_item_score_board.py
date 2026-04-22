@@ -3,6 +3,7 @@
 
 import urllib.parse
 from collections import defaultdict
+from functools import lru_cache
 
 import frappe
 from frappe.query_builder import DocType
@@ -45,10 +46,41 @@ def get_data(filters=None, cycle_dates=None):
 	# from_date = filters.get("from_date") or frappe.utils.add_months(frappe.utils.today(), -1)
 	# to_date = filters.get("to_date") or frappe.utils.today()
 	roles = frappe.get_roles(frappe.session.user)
-	if any(role in ["System Manager", "Work Item Admin"] for role in roles):
-		user = filters.get("user") or None
-	else:
-		user = frappe.session.user
+
+	def _compute_visible_users():
+		if any(role in ["System Manager", "Work Item Admin"] for role in roles):
+			return None if (filters.get("user") is None) else {filters.get("user")}
+
+		current_user = frappe.session.user
+
+		employee_to_user, employee_display_by_name, reports_to_by_employee, children_by_manager = (
+			get_employee_list()
+		)
+
+		emp_name = frappe.db.get_value("Employee", {"user_id": current_user, "status": "Active"}, "name")
+		if not emp_name:
+			return {current_user}
+
+		stack = [emp_name]
+		descendants = set()
+		while stack:
+			cur = stack.pop()
+			if cur in descendants:
+				continue
+			descendants.add(cur)
+			for c in children_by_manager.get(cur, []):
+				if c not in descendants:
+					stack.append(c)
+
+		visible = {current_user}
+		for en in descendants:
+			uid = employee_to_user.get(en)
+			if uid:
+				visible.add(uid)
+
+		return visible
+
+	visible_users = _compute_visible_users()
 
 	work_item = DocType("Work Item")
 	current_datetime = now_datetime()
@@ -121,14 +153,49 @@ def get_data(filters=None, cycle_dates=None):
 		else build_average_rows(base_rows, cycle_dates, user_cycle_stats)
 	)
 
-	if user:
-		rows = [row for row in rows if row.get("user_id") == user]
+	if visible_users is not None:
+		rows = [row for row in rows if row.get("user_id") in visible_users]
 
 	return rows if erpnext_with_employee else sorted(rows, key=lambda row: row.get("user") or "")
 
 
 def is_erpnext_installed():
 	return "erpnext" in frappe.get_installed_apps() and frappe.db.exists("DocType", "Employee")
+
+
+@lru_cache(maxsize=1)
+def _fetch_employees_active():
+	employees = frappe.get_all(
+		"Employee",
+		fields=["name", "employee_name", "user_id", "company_email", "personal_email", "reports_to"],
+		filters={"status": "Active"},
+	)
+	employee_to_user = {}
+	employee_display_by_name = {}
+	reports_to_by_employee = {}
+	children_by_manager = defaultdict(list)
+	for employee in employees:
+		employee_name = employee.get("name")
+		employee_user = employee.get("user_id")
+		employee_display = (
+			employee.get("employee_name")
+			or employee.get("company_email")
+			or employee.get("personal_email")
+			or employee_name
+			or employee_user
+		)
+		reports_to = employee.get("reports_to")
+		if not employee_name:
+			continue
+
+		reports_to_by_employee[employee_name] = reports_to
+		employee_display_by_name[employee_name] = employee_display
+		if employee_user:
+			employee_to_user[employee_name] = employee_user
+		if reports_to:
+			children_by_manager[reports_to].append(employee_name)
+
+	return employee_to_user, employee_display_by_name, reports_to_by_employee, children_by_manager
 
 
 def build_average_rows(rows, cycle_dates=None, user_cycle_stats=None):
@@ -173,36 +240,9 @@ def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
 		stats_by_user[assignee]["total_score"] = row.get("total_score") or 0
 		stats_by_user[assignee]["work_item_count"] = row.get("work_item_count") or 0
 
-	employees = frappe.get_all(
-		"Employee",
-		fields=["name", "employee_name", "user_id", "company_email", "personal_email", "reports_to"],
-		filters={"status": "Active"},
+	employee_to_user, employee_display_by_name, reports_to_by_employee, children_by_manager, stats_by_user = (
+		get_employee_list(stats_by_user)
 	)
-	employee_to_user = {}
-	employee_display_by_name = {}
-	reports_to_by_employee = {}
-	children_by_manager = defaultdict(list)
-	for employee in employees:
-		employee_name = employee.get("name")
-		employee_user = employee.get("user_id")
-		employee_display = (
-			employee.get("employee_name")
-			or employee.get("company_email")
-			or employee.get("personal_email")
-			or employee_name
-			or employee_user
-		)
-		reports_to = employee.get("reports_to")
-		if not employee_name:
-			continue
-
-		reports_to_by_employee[employee_name] = reports_to
-		employee_display_by_name[employee_name] = employee_display
-		if employee_user:
-			employee_to_user[employee_name] = employee_user
-			stats_by_user.setdefault(employee_user, {"total_score": 0, "work_item_count": 0})
-		if reports_to:
-			children_by_manager[reports_to].append(employee_name)
 
 	memo = {}
 	active_stack = set()
@@ -379,3 +419,20 @@ def get_hierarchical_scores(base_rows, cycle_dates=None, user_cycle_stats=None):
 		return build_average_rows(base_rows, cycle_dates, user_cycle_stats)
 
 	return rows
+
+
+def get_employee_list(stats_by_user=None):
+	employee_to_user, employee_display_by_name, reports_to_by_employee, children_by_manager = (
+		_fetch_employees_active()
+	)
+	if stats_by_user:
+		for uid in employee_to_user.values():
+			stats_by_user.setdefault(uid, {"total_score": 0, "work_item_count": 0})
+		return (
+			employee_to_user,
+			employee_display_by_name,
+			reports_to_by_employee,
+			children_by_manager,
+			stats_by_user,
+		)
+	return employee_to_user, employee_display_by_name, reports_to_by_employee, children_by_manager
