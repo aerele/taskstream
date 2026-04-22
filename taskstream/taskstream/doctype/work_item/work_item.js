@@ -332,6 +332,19 @@ frappe.ui.form.on("Work Item", {
 			if (detailsTab) {
 				detailsTab.set_active();
 			}
+			empty_fields(frm, [
+				"recurrence_description",
+				"recurrence_type",
+				"repeat_until",
+				"recurrence_frequency",
+				"recurrence_day",
+				"monthly_recurrence_based_on",
+				"recurrence_month",
+				"recurrence_date",
+				"recurrence_day_occurrence",
+				"recurrence_time",
+			]);
+			frm.set_value("recurrence_type", "One Time");
 		}
 	},
 
@@ -344,6 +357,14 @@ frappe.ui.form.on("Work Item", {
 			set_active_tab(frm, "details_tab", "Details");
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
 			frm.set_df_property("target_end_date", "read_only", 0);
+			empty_fields(frm, [
+				"start_date_time",
+				"work_flow_template",
+				"html_aseg",
+				"summary",
+				"description",
+				"assignee",
+			]);
 		}
 	},
 
@@ -358,14 +379,18 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	reviewer: function (frm) {
-		if (frm.doc.reviewer == frm.doc.assignee) {
-			frappe.throw("Reviewer cannot be same as the Assignee");
+		if (frm.doc.reviewer) {
+			if (frm.doc.reviewer == frm.doc.assignee) {
+				frappe.throw("Reviewer cannot be same as the Assignee");
+			}
 		}
 	},
 
 	assignee: function (frm) {
-		if (frm.doc.reviewer == frm.doc.assignee) {
-			frappe.throw("Assignee cannot be same as the Reviewer");
+		if (frm.doc.assignee) {
+			if (frm.doc.reviewer == frm.doc.assignee) {
+				frappe.throw("Assignee cannot be same as the Reviewer");
+			}
 		}
 	},
 
@@ -1144,4 +1169,21 @@ function set_wft_tasks(frm, wft) {
 			}
 		},
 	});
+}
+
+function empty_fields(frm, fields) {
+	if (!fields) return;
+	if (Array.isArray(fields)) {
+		for (let field of fields) {
+			frm.set_value(field, null);
+		}
+		return;
+	}
+
+	// support object/map of fieldnames
+	for (let field in fields) {
+		if (Object.prototype.hasOwnProperty.call(fields, field)) {
+			frm.set_value(field, null);
+		}
+	}
 }

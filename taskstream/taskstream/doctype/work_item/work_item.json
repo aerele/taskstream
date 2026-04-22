@@ -43,8 +43,6 @@
   "work_flow_template",
   "column_break_nvbq",
   "start_date_time",
-  "section_break_mlbj",
-  "tasks",
   "section_break_aljj",
   "html_aseg",
   "recurrence_tab",
@@ -272,7 +270,6 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.recurring_task ===0",
    "fieldname": "work_flow",
    "fieldtype": "Check",
    "label": "Work Flow"
@@ -430,7 +427,6 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.work_flow ===0",
    "fieldname": "recurring_task",
    "fieldtype": "Check",
    "label": "Recurring Task"
@@ -456,17 +452,6 @@
    "label": "Work Flow"
   },
   {
-   "fieldname": "section_break_mlbj",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "tasks",
-   "fieldtype": "Table",
-   "label": "Tasks",
-   "options": "Work Flow Template Item",
-   "read_only": 1
-  },
-  {
    "fieldname": "section_break_aljj",
    "fieldtype": "Section Break"
   },
@@ -478,7 +463,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 12:36:52.231615",
+ "modified": "2026-04-22 15:44:34.298043",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
