@@ -6,8 +6,9 @@ frappe.ui.form.on("Work Item", {
 		if (frm.is_new() && !frm.doc.reporter) {
 			frm.set_value("reporter", frappe.session.user);
 			frm.set_value("requester", frappe.session.user);
+			add_row_to_table(frm);
 		}
-		update_recurrence_description(frm);
+		// update_recurrence_description(frm);
 		if (frm.is_new() && !frm.doc.target_end_date) {
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
 		}
@@ -1188,5 +1189,18 @@ function empty_fields(frm, fields) {
 		if (Object.prototype.hasOwnProperty.call(fields, field)) {
 			frm.set_value(field, null);
 		}
+	}
+}
+
+function add_row_to_table(frm) {
+	if (frm.is_new()) {
+		let child_tables = ["recurrence_date", "recurrence_day_occurrence", "recurrence_time"];
+
+		child_tables.forEach((fieldname) => {
+			if ((frm.doc[fieldname] || []).length === 0) {
+				frm.add_child(fieldname);
+				frm.refresh_field(fieldname);
+			}
+		});
 	}
 }
