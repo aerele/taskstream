@@ -631,6 +631,9 @@ function update_recurrence_description(frm) {
 	// 	// frm.fields_dict.recurrence_month.set_description("");
 	// 	return;
 	// }
+	if (type === "Daily") {
+		frm.set_value("recurrence_description", null);
+	}
 
 	if (type === "Weekly") {
 		let desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
