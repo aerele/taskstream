@@ -50,17 +50,16 @@
   "recurrence_details_column",
   "recurrence_description",
   "recurrence_type",
-  "repeat_until",
   "recurrence_frequency",
   "recurrence_day",
   "monthly_recurrence_based_on",
   "recurrence_month",
-  "column_break_iejr",
-  "assigned_on",
-  "section_break_lqwq",
   "recurrence_date",
   "recurrence_day_occurrence",
   "recurrence_time",
+  "repeat_until",
+  "column_break_iejr",
+  "assigned_on",
   "score_tab",
   "section_break_yzzw",
   "column_break_fyin",
@@ -316,10 +315,6 @@
    "options": "User"
   },
   {
-   "fieldname": "section_break_lqwq",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "section_break_yzzw",
    "fieldtype": "Section Break"
   },
@@ -463,7 +458,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 15:44:34.298043",
+ "modified": "2026-04-22 16:54:24.873055",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
