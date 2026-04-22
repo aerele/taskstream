@@ -209,11 +209,12 @@ def _get_valid_dates(self, start_date, end_date):
 
 	def _parse_recurrence_time(recurrence_time):
 		try:
-			if isinstance(recurrence_time, timedelta):
-				return recurrence_time
-			hours = int(recurrence_time)
-			return timedelta(hours=hours)
-		except (ValueError, TypeError):
+			if isinstance(recurrence_time, str) and ":" in recurrence_time:
+				t = recurrence_time.split(":")
+				return timedelta(hours=int(t[0]), minutes=int(t[1]), seconds=0)
+			else:
+				return timedelta(hours=int(recurrence_time))
+		except (ValueError, TypeError, IndexError):
 			return timedelta(hours=0)
 
 	parsed_times = [_parse_recurrence_time(t.recurrence_time) for t in self.recurrence_time]
@@ -424,8 +425,12 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 		time_delta = recurrence_time
 	else:
 		try:
-			time_delta = timedelta(hours=int(recurrence_time))
-		except (ValueError, TypeError):
+			if isinstance(recurrence_time, str) and ":" in recurrence_time:
+				t = recurrence_time.split(":")
+				time_delta = timedelta(hours=int(t[0]), minutes=int(t[1]), seconds=0)
+			else:
+				time_delta = timedelta(hours=int(recurrence_time))
+		except (ValueError, TypeError, IndexError):
 			time_delta = timedelta(hours=0)
 
 	# new_wi.append(
