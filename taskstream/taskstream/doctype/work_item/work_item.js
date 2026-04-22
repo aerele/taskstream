@@ -215,8 +215,10 @@ frappe.ui.form.on("Work Item", {
 		}
 		// Set Read Only for non reporter and non requester
 		if (
-			!frm.is_new() &&
-			(frm.doc.first_mail == 1 || (user !== frm.doc.reporter && user !== frm.doc.requester))
+			frm.doc.status === "Done" ||
+			(!frm.is_new() &&
+				(frm.doc.first_mail == 1 ||
+					(user !== frm.doc.reporter && user !== frm.doc.requester)))
 		) {
 			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
 			fieldnames.forEach((field) => {
