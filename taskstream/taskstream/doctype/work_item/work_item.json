@@ -43,8 +43,6 @@
   "work_flow_template",
   "column_break_nvbq",
   "start_date_time",
-  "section_break_mlbj",
-  "tasks",
   "section_break_aljj",
   "html_aseg",
   "recurrence_tab",
@@ -52,17 +50,16 @@
   "recurrence_details_column",
   "recurrence_description",
   "recurrence_type",
-  "repeat_until",
   "recurrence_frequency",
   "recurrence_day",
   "monthly_recurrence_based_on",
   "recurrence_month",
-  "column_break_iejr",
-  "assigned_on",
-  "section_break_lqwq",
   "recurrence_date",
   "recurrence_day_occurrence",
   "recurrence_time",
+  "repeat_until",
+  "column_break_iejr",
+  "assigned_on",
   "score_tab",
   "section_break_yzzw",
   "column_break_fyin",
@@ -118,7 +115,8 @@
    "depends_on": "eval: doc.recurrence_type != 'One Time'",
    "fieldname": "repeat_until",
    "fieldtype": "Date",
-   "label": "Repeat Until"
+   "label": "Repeat Until",
+   "mandatory_depends_on": "eval: doc.recurring_task == 1"
   },
   {
    "fieldname": "column_break_fyin",
@@ -271,7 +269,6 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.recurring_task ===0",
    "fieldname": "work_flow",
    "fieldtype": "Check",
    "label": "Work Flow"
@@ -316,10 +313,6 @@
    "label": "Reviewer",
    "mandatory_depends_on": "review_required",
    "options": "User"
-  },
-  {
-   "fieldname": "section_break_lqwq",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "section_break_yzzw",
@@ -429,7 +422,6 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.work_flow ===0",
    "fieldname": "recurring_task",
    "fieldtype": "Check",
    "label": "Recurring Task"
@@ -455,17 +447,6 @@
    "label": "Work Flow"
   },
   {
-   "fieldname": "section_break_mlbj",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "tasks",
-   "fieldtype": "Table",
-   "label": "Tasks",
-   "options": "Work Flow Template Item",
-   "read_only": 1
-  },
-  {
    "fieldname": "section_break_aljj",
    "fieldtype": "Section Break"
   },
@@ -477,7 +458,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-20 17:48:51.625648",
+ "modified": "2026-04-22 16:54:24.873055",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",

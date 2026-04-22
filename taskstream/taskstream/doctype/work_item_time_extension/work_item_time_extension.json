@@ -34,12 +34,14 @@
   {
    "fieldname": "requested_due_date",
    "fieldtype": "Datetime",
-   "label": "Requested Due Date"
+   "label": "Requested Due Date",
+   "read_only_depends_on": "eval: doc.status != \"Pending\""
   },
   {
    "fieldname": "reason",
    "fieldtype": "Small Text",
-   "label": "Reason"
+   "label": "Reason",
+   "read_only_depends_on": "eval: doc.status != \"Pending\""
   },
   {
    "fieldname": "requester",
@@ -87,7 +89,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-31 11:50:46.196093",
+ "modified": "2026-04-22 12:50:21.409602",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Time Extension",

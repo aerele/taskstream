@@ -6,8 +6,9 @@ frappe.ui.form.on("Work Item", {
 		if (frm.is_new() && !frm.doc.reporter) {
 			frm.set_value("reporter", frappe.session.user);
 			frm.set_value("requester", frappe.session.user);
+			add_row_to_table(frm);
 		}
-		update_recurrence_description(frm);
+		// update_recurrence_description(frm);
 		if (frm.is_new() && !frm.doc.target_end_date) {
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
 		}
@@ -215,8 +216,10 @@ frappe.ui.form.on("Work Item", {
 		}
 		// Set Read Only for non reporter and non requester
 		if (
-			!frm.is_new() &&
-			(frm.doc.first_mail == 1 || (user !== frm.doc.reporter && user !== frm.doc.requester))
+			frm.doc.status === "Done" ||
+			(!frm.is_new() &&
+				(frm.doc.first_mail == 1 ||
+					(user !== frm.doc.reporter && user !== frm.doc.requester)))
 		) {
 			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
 			fieldnames.forEach((field) => {
@@ -330,6 +333,19 @@ frappe.ui.form.on("Work Item", {
 			if (detailsTab) {
 				detailsTab.set_active();
 			}
+			empty_fields(frm, [
+				"recurrence_description",
+				"recurrence_type",
+				"repeat_until",
+				"recurrence_frequency",
+				"recurrence_day",
+				"monthly_recurrence_based_on",
+				"recurrence_month",
+				"recurrence_date",
+				"recurrence_day_occurrence",
+				"recurrence_time",
+			]);
+			frm.set_value("recurrence_type", "One Time");
 		}
 	},
 
@@ -342,6 +358,14 @@ frappe.ui.form.on("Work Item", {
 			set_active_tab(frm, "details_tab", "Details");
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
 			frm.set_df_property("target_end_date", "read_only", 0);
+			empty_fields(frm, [
+				"start_date_time",
+				"work_flow_template",
+				"html_aseg",
+				"summary",
+				"description",
+				"assignee",
+			]);
 		}
 	},
 
@@ -356,14 +380,18 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	reviewer: function (frm) {
-		if (frm.doc.reviewer == frm.doc.assignee) {
-			frappe.throw("Reviewer cannot be same as the Assignee");
+		if (frm.doc.reviewer) {
+			if (frm.doc.reviewer == frm.doc.assignee) {
+				frappe.throw("Reviewer cannot be same as the Assignee");
+			}
 		}
 	},
 
 	assignee: function (frm) {
-		if (frm.doc.reviewer == frm.doc.assignee) {
-			frappe.throw("Assignee cannot be same as the Reviewer");
+		if (frm.doc.assignee) {
+			if (frm.doc.reviewer == frm.doc.assignee) {
+				frappe.throw("Assignee cannot be same as the Reviewer");
+			}
 		}
 	},
 
@@ -604,6 +632,9 @@ function update_recurrence_description(frm) {
 	// 	// frm.fields_dict.recurrence_month.set_description("");
 	// 	return;
 	// }
+	if (type === "Daily") {
+		frm.set_value("recurrence_description", null);
+	}
 
 	if (type === "Weekly") {
 		let desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
@@ -1142,4 +1173,34 @@ function set_wft_tasks(frm, wft) {
 			}
 		},
 	});
+}
+
+function empty_fields(frm, fields) {
+	if (!fields) return;
+	if (Array.isArray(fields)) {
+		for (let field of fields) {
+			frm.set_value(field, null);
+		}
+		return;
+	}
+
+	// support object/map of fieldnames
+	for (let field in fields) {
+		if (Object.prototype.hasOwnProperty.call(fields, field)) {
+			frm.set_value(field, null);
+		}
+	}
+}
+
+function add_row_to_table(frm) {
+	if (frm.is_new()) {
+		let child_tables = ["recurrence_date", "recurrence_day_occurrence", "recurrence_time"];
+
+		child_tables.forEach((fieldname) => {
+			if ((frm.doc[fieldname] || []).length === 0) {
+				frm.add_child(fieldname);
+				frm.refresh_field(fieldname);
+			}
+		});
+	}
 }

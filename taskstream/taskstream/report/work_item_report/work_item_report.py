@@ -74,9 +74,10 @@ def get_data(filters=None, cycle_dates=None, no_of_cycles=0):
 		work_item.actual_end_date.as_("actual_end"),
 	)
 
-	query_open = base_query.where(work_item.target_end_date.between(start_dt, end_dt)).where(
-		work_item.status != "Done"
-	)
+	# query_open = base_query.where(work_item.target_end_date.between(start_dt, end_dt)).where(
+	# 	work_item.status != "Done"
+	# )
+	query_open = base_query.where(work_item.target_end_date < end_dt).where(work_item.status != "Done")
 
 	query_done = base_query.where(work_item.actual_end_date.between(start_dt, end_dt)).where(
 		work_item.status == "Done"

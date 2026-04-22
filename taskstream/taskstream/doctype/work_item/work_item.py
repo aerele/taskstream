@@ -59,7 +59,7 @@ class WorkItem(Document):
 			calculate_planned_target(self)
 
 		calculate_score(self, "Work Item Update")
-		if self.work_flow_template:
+		if self.work_flow_template and self.work_flow:
 			if self.idx == 0:
 				self.idx = 1
 			if self.status == "Done":
