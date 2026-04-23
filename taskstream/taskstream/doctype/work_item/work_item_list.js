@@ -2,10 +2,12 @@ frappe.listview_settings["Work Item"] = {
 	get_indicator: function (doc) {
 		if (!doc.status) return [__("No Status"), "grey", ""];
 		switch (doc.status) {
-			case "To Do":
-				return [__("To Do"), "grey", "status,=,To Do"];
-			case "In Progress":
-				return [__("In Progress"), "blue", "status,=,In Progress"];
+			// case "To Do":
+			// 	return [__("To Do"), "grey", "status,=,To Do"];
+			case "Open":
+				return [__("Open"), "grey", "status,=,Open"];
+			// case "In Progress":
+			// 	return [__("In Progress"), "blue", "status,=,In Progress"];
 			case "Under Review":
 				return [__("Under Review"), "orange", "status,=,Under Review"];
 			case "Done":

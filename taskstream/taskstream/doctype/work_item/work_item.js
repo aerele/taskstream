@@ -5,15 +5,28 @@ frappe.ui.form.on("Work Item", {
 	onload: function (frm) {
 		if (frm.is_new() && !frm.doc.reporter) {
 			frm.set_value("reporter", frappe.session.user);
+			frm.set_value("requester", frappe.session.user);
+			add_row_to_table(frm);
 		}
-		update_recurrence_description(frm);
+		// update_recurrence_description(frm);
+		if (frm.is_new() && !frm.doc.target_end_date) {
+			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
+		}
 	},
 
 	refresh: function (frm) {
+		frm.page.sidebar.hide();
+		$(frm.page.wrapper).find(".sidebar-toggle-btn").hide();
 		setup_two_col_layout(frm);
+		add_recalculate_score_button(frm);
+		set_wft_tasks(frm, frm.doc.work_flow_template);
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
 		const allowed = !(type === "One Time" || type === "Recurring Instance");
+		//hide benefit_of_work_done if form is new
+		if (frm.is_new()) {
+			frm.set_df_property("benefit_of_work_done", "hidden", 1);
+		}
 		//Update Master Recurring Work Item
 		if (allowed && (user === frm.doc.reporter || user === frm.doc.requester)) {
 			frm.add_custom_button(__("Update Recurrence Item"), function () {
@@ -22,7 +35,7 @@ frappe.ui.form.on("Work Item", {
 		}
 		// Mark Complete button
 		if (
-			(frm.doc.status === "In Progress" && !frm.doc.review_required) ||
+			(frm.doc.status === "Open" && !frm.doc.review_required && user === frm.doc.assignee) ||
 			(frm.doc.status === "Under Review" && user === frm.doc.reviewer)
 		) {
 			frm.add_custom_button(__("Mark Complete"), function () {
@@ -32,6 +45,8 @@ frappe.ui.form.on("Work Item", {
 						frappe.call({
 							method: "taskstream.taskstream.doctype.work_item.work_item.mark_complete",
 							args: { docname: frm.doc.name },
+							freeze: true,
+							freeze_message: __("Applying updates..."),
 							callback: function (r) {
 								if (!r.exc) {
 									frappe.msgprint(__("Marked as Done!"));
@@ -47,7 +62,8 @@ frappe.ui.form.on("Work Item", {
 		if (
 			!frm.doc.first_mail &&
 			!frm.is_dirty() &&
-			frm.doc.status === "To Do" &&
+			frm.doc.status === "Open" &&
+			["One Time", "Recurring Instance"].includes(frm.doc.recurrence_type) &&
 			(user === frm.doc.reporter || user === frm.doc.requester)
 		) {
 			frm.add_custom_button(__("Sent Mail"), function () {
@@ -104,22 +120,22 @@ frappe.ui.form.on("Work Item", {
 			});
 		}
 		// Start Now Button
-		if (!frm.is_new() && frm.doc.status === "To Do" && frm.doc.assignee === user) {
-			frm.add_custom_button(__("Start Now"), function () {
-				frappe.call({
-					method: "taskstream.taskstream.doctype.work_item.work_item.start_now",
-					args: { docname: frm.doc.name },
-					callback: function (r) {
-						if (!r.exc) {
-							frappe.msgprint(__("Work Item started!"));
-							frm.reload_doc();
-						}
-					},
-				});
-			});
-		}
+		// if (!frm.is_new() && frm.doc.status === "To Do" && frm.doc.assignee === user) {
+		// 	frm.add_custom_button(__("Start Now"), function () {
+		// 		frappe.call({
+		// 			method: "taskstream.taskstream.doctype.work_item.work_item.start_now",
+		// 			args: { docname: frm.doc.name },
+		// 			callback: function (r) {
+		// 				if (!r.exc) {
+		// 					frappe.msgprint(__("Work Item started!"));
+		// 					frm.reload_doc();
+		// 				}
+		// 			},
+		// 		});
+		// 	});
+		// }
 		//Hold Button
-		if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
+		if (frm.doc.status === "Open" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Hold"), function () {
 				frappe.db.set_value("Work Item", frm.doc.name, "status", "On Hold").then(() => {
 					frappe.msgprint(__("Work Item put on hold!"));
@@ -130,19 +146,17 @@ frappe.ui.form.on("Work Item", {
 		//Resume Button
 		if (frm.doc.status === "On Hold" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Resume"), function () {
-				frappe.db
-					.set_value("Work Item", frm.doc.name, "status", "In Progress")
-					.then(() => {
-						frappe.msgprint(__("Work Item resumed!"));
-						frm.reload_doc();
-					});
+				frappe.db.set_value("Work Item", frm.doc.name, "status", "Open").then(() => {
+					frappe.msgprint(__("Work Item resumed!"));
+					frm.reload_doc();
+				});
 			});
 		}
 		// Send for Review button
-		if (!frm.is_new() && ["In Progress", "Under Review"].includes(frm.doc.status)) {
+		if (!frm.is_new() && ["Open", "Under Review"].includes(frm.doc.status)) {
 			const iscritical = frm.doc.review_required;
 
-			if (iscritical && user === frm.doc.assignee && frm.doc.status == "In Progress") {
+			if (iscritical && user === frm.doc.assignee && frm.doc.status == "Open") {
 				frm.add_custom_button(__("Send for Review"), function () {
 					frappe.call({
 						method: "taskstream.taskstream.doctype.work_item.work_item.send_for_review",
@@ -161,7 +175,7 @@ frappe.ui.form.on("Work Item", {
 			}
 		}
 		//Time extension button
-		if (frm.doc.status === "In Progress" && frm.doc.assignee === user) {
+		if (frm.doc.status === "Open" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Request Time Extension"), function () {
 				let d = new frappe.ui.Dialog({
 					title: "Request Time Extension",
@@ -202,19 +216,19 @@ frappe.ui.form.on("Work Item", {
 		}
 		// Set Read Only for non reporter and non requester
 		if (
-			!frm.is_new() &&
-			(frm.doc.first_mail == 1 || (user !== frm.doc.reporter && user !== frm.doc.requester))
+			frm.doc.status === "Done" ||
+			(!frm.is_new() &&
+				(frm.doc.first_mail == 1 ||
+					(user !== frm.doc.reporter && user !== frm.doc.requester)))
 		) {
 			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
 			fieldnames.forEach((field) => {
-				if (field != "percent_completed") {
-					frm.set_df_property(field, "read_only", 1);
-				}
+				frm.set_df_property(field, "read_only", 1);
 			});
 		}
 		//Update Recurrence Type options
 		if (frm.doc.recurrence_type != "Recurring Instance") {
-			const options = "One Time\nDaily\nWeekly\nMonthly\nYearly";
+			const options = "Daily\nWeekly\nMonthly\nYearly";
 			frm.set_df_property("recurrence_type", "options", options);
 			frm.refresh_field("recurrence_type");
 		}
@@ -224,7 +238,12 @@ frappe.ui.form.on("Work Item", {
 			frm.doc.reporter,
 			frm.doc.requester,
 		];
-		if (frm.doc.status === "In Progress" && approved_users_for_reassignment.includes(user)) {
+		if (
+			frm.doc.status === "Open" &&
+			approved_users_for_reassignment.includes(user) &&
+			["One Time", "Recurring Instance"].includes(frm.doc.recurrence_type) &&
+			!frm.is_new()
+		) {
 			frm.add_custom_button(__("Reassign"), function () {
 				let d = new frappe.ui.Dialog({
 					title: "Reassignment",
@@ -263,8 +282,7 @@ frappe.ui.form.on("Work Item", {
 							},
 							callback: function (r) {
 								if (!r.exc) {
-									frm.reload_doc();
-									d.hide();
+									frappe.set_route("List", "Work Item");
 								}
 							},
 						});
@@ -274,43 +292,117 @@ frappe.ui.form.on("Work Item", {
 				d.show();
 			});
 		}
+		//edit-able condition for benefit_of_work_done
+		if (frm.doc.review_required && user === frm.doc.reviewer) {
+			frm.set_df_property("benefit_of_work_done", "read_only", 0);
+		} else if (
+			!frm.doc.review_required &&
+			(user === frm.doc.reporter || user === frm.doc.requester)
+		) {
+			frm.set_df_property("benefit_of_work_done", "read_only", 0);
+		} else {
+			frm.set_df_property("benefit_of_work_done", "read_only", 1);
+		}
+		//if status != Done, then score label should be Provisional Score
+		if (frm.doc.status != "Done") {
+			frm.set_df_property("score", "label", "Provisional Score");
+		} else {
+			frm.set_df_property("score", "label", "Score");
+		}
 	},
 
 	validate: function (frm) {
 		update_recurrence_description(frm);
 	},
 
+	recurring_task: function (frm) {
+		if (frm.doc.recurring_task === 1) {
+			frm.set_value("target_end_date", null);
+			frm.set_df_property("target_end_date", "read_only", 1);
+			const detailsTab = (frm.layout?.tabs || []).find(
+				(t) => t.df && (t.df.fieldname === "recurrence_tab" || t.label === "Recurrence")
+			);
+			if (detailsTab) {
+				detailsTab.set_active();
+			}
+		} else {
+			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
+			const detailsTab = (frm.layout?.tabs || []).find(
+				(t) => t.df && (t.df.fieldname === "details_tab" || t.label === "Details")
+			);
+			if (detailsTab) {
+				detailsTab.set_active();
+			}
+			empty_fields(frm, [
+				"recurrence_description",
+				"recurrence_type",
+				"repeat_until",
+				"recurrence_frequency",
+				"recurrence_day",
+				"monthly_recurrence_based_on",
+				"recurrence_month",
+				"recurrence_date",
+				"recurrence_day_occurrence",
+				"recurrence_time",
+			]);
+			frm.set_value("recurrence_type", "One Time");
+		}
+	},
+
+	work_flow: function (frm) {
+		if (frm.doc.work_flow) {
+			set_active_tab(frm, "work_flow_tab", "Work Flow");
+			frm.set_value("target_end_date", null);
+			frm.set_df_property("target_end_date", "read_only", 1);
+		} else {
+			set_active_tab(frm, "details_tab", "Details");
+			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
+			frm.set_df_property("target_end_date", "read_only", 0);
+			empty_fields(frm, [
+				"start_date_time",
+				"work_flow_template",
+				"html_aseg",
+				"summary",
+				"description",
+				"assignee",
+			]);
+		}
+	},
+
 	review_required: function (frm) {
 		if (frm.doc.review_required && !frm.doc.reviewer) {
-			frm.set_value("reviewer", frappe.session.user);
 			frm.set_df_property("reviewer", "reqd", frm.doc.review_required);
 		}
 		if (!frm.doc.review_required) {
-			frm.set_value("reviewer", "");
+			frm.set_value("reviewer", null);
 		}
 		frm.refresh_field("reviewer");
 	},
 
 	reviewer: function (frm) {
-		if (frm.doc.reviewer == frm.doc.assignee) {
-			frappe.throw("Reviewer cannot be same as the Assignee");
+		if (frm.doc.reviewer) {
+			if (frm.doc.reviewer == frm.doc.assignee) {
+				frappe.throw("Reviewer cannot be same as the Assignee");
+			}
 		}
 	},
 
 	assignee: function (frm) {
-		if (frm.doc.reviewer == frm.doc.assignee) {
-			frappe.throw("Assignee cannot be same as the Reviewer");
+		if (frm.doc.assignee) {
+			if (frm.doc.reviewer == frm.doc.assignee) {
+				frappe.throw("Assignee cannot be same as the Reviewer");
+			}
 		}
 	},
 
-	percent_completed: async function (frm) {
+	benefit_of_work_done: async function (frm) {
 		const completion_score = await frappe.db.get_single_value(
 			"Work Item Configuration",
 			"completion_score"
 		);
 		const considerable_score = flt(completion_score) / 2;
-		const { percent_completed } = frm.doc;
-		const score = (flt(percent_completed) / 100) * considerable_score;
+		const { benefit_of_work_done } = frm.doc;
+		const score = (flt(benefit_of_work_done) / 100) * considerable_score;
 		frm.set_value("score", score);
 	},
 
@@ -365,7 +457,9 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	work_flow_template(frm) {
+		setup_work_flow_template(frm);
 		set_target_end_date_time(frm);
+		set_wft_tasks(frm, frm.doc.work_flow_template);
 	},
 
 	start_date_time(frm) {
@@ -513,28 +607,33 @@ function update_recurrence_description(frm) {
 		return " in " + sorted.join(", ");
 	};
 
-	if (type === "Weekly" && !weekdays.length) {
-		const desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
-		frm.fields_dict.recurrence_frequency.set_description(desc);
-		frm.fields_dict.recurrence_day.set_description("");
-		return;
-	}
+	// if (type === "Weekly" && !weekdays.length) {
+	// 	const desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
+	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
+	// 	// frm.fields_dict.recurrence_day.set_description("");
+	// 	return;
+	// }
 
-	if (
-		type === "Monthly" &&
-		!(frm.doc.recurrence_date?.length || frm.doc.recurrence_day_occurrence?.length)
-	) {
-		const desc = `Every ${freq} month${freq > 1 ? "s" : ""}`;
-		frm.fields_dict.recurrence_frequency.set_description(desc);
-		frm.fields_dict.monthly_recurrence_based_on.set_description("");
-		return;
-	}
+	// if (
+	// 	type === "Monthly" &&
+	// 	!(frm.doc.recurrence_date?.length || frm.doc.recurrence_day_occurrence?.length)
+	// ) {
+	// 	const desc = `Every ${freq} month${freq > 1 ? "s" : ""}`;
+	// 	frm.set_value("recurrence_description", desc);
+	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
+	// 	// frm.fields_dict.monthly_recurrence_based_on.set_description("");
+	// 	return;
+	// }
 
-	if (type === "Yearly" && !months.length && !times.length) {
-		const desc = `Every ${freq} year${freq > 1 ? "s" : ""}`;
-		frm.fields_dict.recurrence_frequency.set_description(desc);
-		frm.fields_dict.recurrence_month.set_description("");
-		return;
+	// if (type === "Yearly" && !months.length && !times.length) {
+	// 	const desc = `Every ${freq} year${freq > 1 ? "s" : ""}`;
+	// 	frm.set_value("recurrence_description", desc);
+	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
+	// 	// frm.fields_dict.recurrence_month.set_description("");
+	// 	return;
+	// }
+	if (type === "Daily") {
+		frm.set_value("recurrence_description", null);
 	}
 
 	if (type === "Weekly") {
@@ -543,8 +642,9 @@ function update_recurrence_description(frm) {
 			desc += " on " + sorted_days.join(", ");
 		}
 		desc += formatTimes(times);
-		frm.fields_dict.recurrence_day.set_description(desc);
-		frm.fields_dict.recurrence_frequency.set_description("");
+		frm.set_value("recurrence_description", desc);
+		// frm.fields_dict.recurrence_details_column.set_description(desc);
+		// frm.fields_dict.recurrence_frequency.set_description("");
 		return;
 	}
 
@@ -554,7 +654,8 @@ function update_recurrence_description(frm) {
 
 		if (frm.doc.monthly_recurrence_based_on === "Date") {
 			desc += formatDates(dates) + formatTimes(times);
-			frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
+			// frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
+			frm.set_value("recurrence_description", desc);
 		} else if (frm.doc.monthly_recurrence_based_on === "Day") {
 			const occurrences = (frm.doc.recurrence_day_occurrence || []).map(
 				(d) => `${d.week_order} ${d.weekday}`
@@ -563,22 +664,26 @@ function update_recurrence_description(frm) {
 				desc += " on " + occurrences.join(", ");
 			}
 			desc += formatTimes(times);
-			frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
+			// frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
+			frm.set_value("recurrence_description", desc);
 		} else {
-			frm.fields_dict.recurrence_frequency.set_description(base);
-			frm.fields_dict.monthly_recurrence_based_on.set_description("");
+			frm.set_value("recurrence_description", desc);
+			// frm.fields_dict.recurrence_frequency.set_description(base);
+			// frm.fields_dict.monthly_recurrence_based_on.set_description("");
 		}
 
-		frm.fields_dict.recurrence_frequency.set_description("");
-		frm.fields_dict.recurrence_day?.set_description("");
+		// frm.fields_dict.recurrence_frequency.set_description("");
+		// frm.fields_dict.recurrence_day?.set_description("");
+		// frm.set_value("recurrence_description", "");
 		return;
 	}
 
 	if (type === "Yearly") {
 		let desc = `Every ${freq} year${freq > 1 ? "s" : ""}`;
 		desc += formatMonths(months) + formatDates(dates) + formatTimes(times);
-		frm.fields_dict.recurrence_month.set_description(desc);
-		frm.fields_dict.recurrence_frequency.set_description("");
+		// frm.fields_dict.recurrence_month.set_description(desc);
+		// frm.fields_dict.recurrence_frequency.set_description("");
+		frm.set_value("recurrence_description", desc);
 		return;
 	}
 }
@@ -608,20 +713,22 @@ function set_target_end_date_time(frm) {
 		},
 		callback: function (r) {
 			if (!r.exc && r.message) {
-				let first_activity = (frm.doc.activities || [])[0];
+				// let first_activity = (frm.doc.activities || [])[0];
 
-				if (!first_activity) {
-					first_activity = frm.add_child("activities");
-					first_activity.action_type = "Target End Date";
-				}
+				// if (!first_activity) {
+				// 	first_activity = frm.add_child("activities");
+				// 	first_activity.action_type = "Target End Date";
+				// }
 
-				frappe.model.set_value(
-					first_activity.doctype,
-					first_activity.name,
-					"time",
-					r.message
-				);
-				frm.refresh_field("activities");
+				// frappe.model.set_value(
+				// 	first_activity.doctype,
+				// 	first_activity.name,
+				// 	"time",
+				// 	r.message
+				// );
+				// frm.refresh_field("activities");
+
+				frm.set_value("target_end_date", r.message);
 			}
 		},
 	});
@@ -809,134 +916,291 @@ function UpdateWorkItemDetails(frm) {
 		],
 		primary_action_label: "Submit",
 		primary_action(values) {
-			frappe.call({
-				method: "taskstream.taskstream.doctype.work_item.work_item.apply_updates_to_work_item",
-				args: {
-					docname: frm.doc.name,
-					updates: JSON.stringify(values),
-					one_time: values.one_time_change ? 1 : 0,
-					change_date: values.update_on_date || null,
-				},
-				callback: function (r) {
-					if (!r.exc) {
-						frappe.msgprint(r.message?.message || r.message || __("Update applied"));
-						d.hide();
-						frm.reload_doc();
-					}
-				},
-			});
+			frappe.confirm(
+				__(
+					"Proceeding will replace the existing documents with a new work item that includes the updates. Are you sure?"
+				),
+				function () {
+					frappe.call({
+						method: "taskstream.taskstream.doctype.work_item.work_item.apply_updates_to_work_item",
+						args: {
+							docname: frm.doc.name,
+							updates: JSON.stringify(values),
+							one_time: values.one_time_change ? 1 : 0,
+							change_date: values.update_on_date || null,
+						},
+						callback: function (r) {
+							if (!r.exc) {
+								frappe.msgprint(
+									r.message?.message || r.message || __("Update applied")
+								);
+								d.hide();
+								frm.reload_doc();
+							}
+						},
+					});
+				}
+			);
 		},
 	});
 	d.show();
 }
 
+function setup_work_flow_template(frm) {
+	if (frm.doc.work_flow_template) {
+		frappe.call({
+			method: "taskstream.taskstream.doctype.work_item.work_item.get_wft_data",
+			args: {
+				wft: frm.doc.work_flow_template,
+			},
+			callback: function (r) {
+				if (!r.exc) {
+					frm.set_value("assignee", r.message.assignee);
+					frm.set_value("summary", r.message.task_name);
+					frm.set_value("description", r.message.task_description);
+				}
+			},
+		});
+	}
+}
+
 function setup_two_col_layout(frm) {
-	const SIDEBAR_SECTIONS = ["people_section", "settings_section"];
-	const WRAP_ATTR = "data-wi-wrap";
-
-	// ── helpers ────────────────────────────────────────────────────────────────
-
-	function getActivePane() {
-		const $pane = $(frm.wrapper).find(".tab-pane.show.active, .tab-pane.active").first();
-		return $pane.length ? $pane : null;
-	}
-
-	// Undo a previous applyLayout: move sections back to pane, reset inline styles
-	function teardown() {
-		$(frm.wrapper)
-			.find(`[${WRAP_ATTR}]`)
-			.each(function () {
-				const $wrap = $(this);
-				const $pane = $wrap.closest(".tab-pane.active, .tab-pane.show");
-				$wrap.find(".form-section").each(function () {
-					// Reset every inline style we injected so Frappe's layout is restored
-					$(this).find(".row").css("display", "");
-					$(this).find(".form-column").css({
-						width: "",
-						"max-width": "",
-						float: "",
-						"padding-left": "",
-						"padding-right": "",
-					});
-					($pane.length ? $pane : $wrap.parent()).append(this);
-				});
-				$wrap.remove();
-			});
-	}
-
-	// Force every .form-column inside a section to stretch 100 % wide.
-	// jQuery .css() writes element.style.* (inline styles), which always
-	// outranks any class-based rule including Bootstrap's @media col-sm-* rules.
-	function stackColumns($section) {
-		// Force all Bootstrap / Frappe column layouts to full width.
-		// Use style.setProperty with "important" so inline styles win over
-		// Bootstrap col-sm-* and Frappe form-layout-flex regardless of specificity.
-		$section.find(".row, .form-layout-flex").css({ display: "block" });
-		$section.find(".form-column, [class*='col-']").each(function () {
-			this.style.setProperty("width", "100%", "important");
-			this.style.setProperty("max-width", "100%", "important");
-			this.style.setProperty("flex", "0 0 100%", "important");
-			this.style.setProperty("float", "none", "important");
-			this.style.setProperty("padding-left", "0", "important");
-			this.style.setProperty("padding-right", "0", "important");
-		});
-		// Also remove Frappe's input-max-width cap and awesomplete width constraint
-		// which limit individual controls regardless of their container width.
-		$section.find(".frappe-control, .input-max-width, .awesomplete, .control-input-wrapper, .control-input").each(function () {
-			this.style.setProperty("max-width", "100%", "important");
-			this.style.setProperty("width", "100%", "important");
-		});
-	}
-
-	// ── core ───────────────────────────────────────────────────────────────────
+	const SIDEBAR_SECTIONS = [
+		"section_break_iwoa",
+		"people_section",
+		"settings_section",
+		"section_break_maby",
+	];
+	const WRAP_CLASS = "wi-global-wrap";
+	const MAIN_CLASS = "wi-main-content";
+	const SIDE_CLASS = "wi-side-bar";
 
 	function applyLayout() {
-		teardown();
+		let $wrapper = $(frm.wrapper);
+		let $wrap = $wrapper.find("." + WRAP_CLASS);
 
-		const $pane = getActivePane();
-		if (!$pane) return;
+		if (!$wrap.length) {
+			let $formLayout = $wrapper.find(".form-layout");
+			if (!$formLayout.length) {
+				$formLayout = $wrapper.find(".layout-main-section");
+			}
+			if (!$formLayout.length) return;
 
-		// Work only with sections that are direct children of this tab pane
-		const $sections = $pane.children(".form-section");
-		const hasSidebar = $sections
-			.toArray()
-			.some((el) => SIDEBAR_SECTIONS.includes($(el).attr("data-fieldname")));
-		if (!hasSidebar) return;
+			$wrap = $("<div>").addClass(WRAP_CLASS);
+			let $mainContent = $("<div>").addClass(MAIN_CLASS);
+			let $sideBar = $("<div>").addClass(SIDE_CLASS);
 
-		// All layout geometry lives in inline styles — zero dependency on CSS classes
-		const $wrap = $("<div>").attr(WRAP_ATTR, "1").css({
-			display: "flex",
-			flexWrap: "wrap",
-			gap: "20px",
-			alignItems: "start",
-		});
-		const $main = $("<div>").css({ flex: "1 1 55%", minWidth: "320px" });
-		const $side = $("<div>").css({ flex: "1 1 300px", minWidth: "300px", maxWidth: "360px" });
+			$formLayout.children().appendTo($mainContent);
+			$wrap.append($mainContent).append($sideBar);
+			$formLayout.append($wrap);
+		}
 
-		$sections.each(function () {
-			if (SIDEBAR_SECTIONS.includes($(this).attr("data-fieldname"))) {
-				stackColumns($(this));
-				$side.append(this);
-			} else {
-				$main.append(this);
+		let $sideBar = $wrapper.find("." + SIDE_CLASS);
+
+		$wrapper.find(".form-section").each(function () {
+			let fieldname = $(this).attr("data-fieldname");
+			if (SIDEBAR_SECTIONS.includes(fieldname)) {
+				if ($(this).parent()[0] !== $sideBar[0]) {
+					$sideBar.append(this);
+				}
 			}
 		});
-
-		$pane.append($wrap.append($main).append($side));
 	}
 
-	// ── tab-switch wiring (bound once per form lifetime) ───────────────────────
+	if (!frm.layout._wi_refresh_patched) {
+		frm.layout._wi_refresh_patched = true;
+		const orig_refresh = frm.layout.refresh_sections;
+		frm.layout.refresh_sections = function () {
+			orig_refresh.apply(this, arguments);
 
-	if (!frm._wi_layout_bound) {
-		frm._wi_layout_bound = true;
-		$(frm.wrapper).on(
-			"shown.bs.tab.wi click.wi",
-			'.nav-tabs .nav-link, a[data-toggle="tab"]',
-			function () {
-				setTimeout(applyLayout, 80);
+			$(frm.wrapper)
+				.find("." + WRAP_CLASS + " .form-section:not(.hide-control)")
+				.each(function () {
+					const $sec = $(this);
+					if (!$sec.find(".frappe-control:not(.hide-control)").length) {
+						$sec.addClass("empty-section");
+					} else {
+						$sec.removeClass("empty-section");
+					}
+				});
+
+			setTimeout(applyLayout, 0);
+		};
+	}
+
+	setTimeout(applyLayout, 50);
+	setTimeout(applyLayout, 200);
+}
+
+function add_recalculate_score_button(frm) {
+	const score_field = frm.get_field("score");
+	if (!score_field?.$wrapper) return;
+
+	score_field.$wrapper.find(".wi-recalculate-score-wrap").remove();
+
+	const $wrapper = $(`
+		<div class="wi-recalculate-score-wrap" style="margin-top: 8	px;">
+			<button type="button" class="btn btn-xs btn-default wi-recalculate-score-btn">
+				${__("Recalculate Score")}
+			</button>
+		</div>
+	`);
+
+	$wrapper.find(".wi-recalculate-score-btn").on("click", () => {
+		if (frm.is_new()) {
+			frappe.msgprint(__("Please save this Work Item before recalculating score."));
+			return;
+		}
+
+		frappe.call({
+			method: "taskstream.taskstream.doctype.work_item.work_item.recalculate_score",
+			args: { docname: frm.doc.name },
+			freeze: true,
+			freeze_message: __("Recalculating score..."),
+			callback: function (r) {
+				if (r.exc) return;
+				frappe.show_alert({ message: __("Score recalculated"), indicator: "green" });
+				frm.reload_doc();
+			},
+		});
+	});
+
+	score_field.$wrapper.append($wrapper);
+}
+
+function set_active_tab(frm, tab_name, tab_label) {
+	const detailsTab = (frm.layout?.tabs || []).find(
+		(t) => t.df && (t.df.fieldname === tab_name || t.label === tab_label)
+	);
+	if (detailsTab) {
+		detailsTab.set_active();
+	}
+}
+
+function set_wft_tasks(frm, wft) {
+	if (!wft) {
+		if (frm.fields_dict.html_aseg && frm.fields_dict.html_aseg.$wrapper) {
+			frm.fields_dict.html_aseg.$wrapper.html("");
+		}
+		return;
+	}
+
+	frappe.call({
+		method: "taskstream.api.get_all_work_flow_template_tasks",
+		args: {
+			wft,
+		},
+		callback: function (r) {
+			if (!r.exc && r.message) {
+				const tasks = r.message;
+				tasks.sort((a, b) => (a.idx || 0) - (b.idx || 0));
+				let current_idx = frm.doc.idx || 0;
+				let html = `<div class="wi-lsec" style="margin-top: 15px; border: 1px solid var(--border-color, #e2e6ea); border-radius: 8px; overflow: hidden; background: var(--card-bg, #fff);">
+					<div class="wi-lsec-head" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color, #f0f1f3); background: var(--control-bg, #fbfcfd); display: flex; justify-content: space-between; align-items: center;">
+						<div style="font-size:11.5px;font-weight:600;color:var(--text-color, #1f272e);">Work Items in this Flow</div>
+						<span style="font-size:11.5px;font-weight:400;color:var(--text-muted, #8d99a5);">${tasks.length} steps</span>
+					</div>
+					<div style="display:flex;flex-direction:column;gap:0;">`;
+
+				tasks.forEach((t) => {
+					let dur = "";
+					if (t.target_end_date_time) {
+						let parts = String(t.target_end_date_time).split(":");
+						let hrs = parseInt(parts[0]) || 0;
+						let mins = parseInt(parts[1]) || 0;
+						if (hrs > 0) dur = `${hrs} hr${hrs !== 1 ? "s" : ""}`;
+						else if (mins > 0) dur = `${mins} min`;
+					}
+
+					let numClass = "wi-task-num";
+					let numText = t.idx || "";
+					let sPill = "";
+					let isCurrentPill = "";
+					let cardClass = "wi-task-card";
+
+					if (t.idx === current_idx) {
+						cardClass += " wi-current-task";
+						isCurrentPill = `<span style="font-size:10px; background:var(--control-bg, #f4f5f7); color:var(--text-color, #1f272e); padding:2px 6px; border-radius:12px; font-weight:600; border:1px solid var(--border-color, #e2e6ea);">Current</span>`;
+					}
+
+					if (t.idx < current_idx) {
+						numClass = "wi-task-num tn-done";
+						numText = "✓";
+						sPill = `<span class="wi-status-pill p-done"><span class="pill-dot"></span><span style="font-size:11px; margin-left: 4px;">Done</span></span>`;
+					} else if (t.idx === current_idx && frm.doc.status === "Done") {
+						numClass = "wi-task-num tn-done";
+						numText = "✓";
+						sPill = `<span class="wi-status-pill p-done"><span class="pill-dot"></span><span style="font-size:11px; margin-left: 4px;">Done</span></span>`;
+					} else if (
+						t.idx === current_idx ||
+						(t.idx === current_idx + 1 && frm.doc.status === "Done")
+					) {
+						numClass = "wi-task-num tn-ip";
+						sPill = `<span class="wi-status-pill p-ip"><span class="pill-dot"></span><span style="font-size:11px; margin-left: 4px;">Open</span></span>`;
+					} else {
+						sPill = `<span class="wi-status-pill p-todo"><span class="pill-dot"></span><span style="font-size:11px; margin-left: 4px;">Pending</span></span>`;
+					}
+
+					let assignee_name = frappe.user?.full_name
+						? frappe.user.full_name(t.assignee)
+						: t.assignee;
+					if (!assignee_name && t.assignee) assignee_name = t.assignee;
+
+					html += `<div class="${cardClass}">
+						<div class="${numClass}">${numText}</div>
+						<div class="wi-task-body">
+							<div class="wi-task-name">${t.task_name || ""}</div>
+							<div class="wi-task-desc">${t.task_description || ""}</div>
+							<div class="wi-task-meta">
+								<span class="wi-task-meta-item">
+									<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3z"/></svg>
+									${assignee_name || ""}
+								</span>
+								<span class="wi-task-meta-item">
+									<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5a.5.5 0 00-1 0V9a.5.5 0 00.252.434l3.5 2a.5.5 0 00.496-.868L8 8.71V3.5zM8 16A8 8 0 108 0a8 8 0 000 16z"/></svg>
+									${dur}
+								</span>
+							</div>
+						</div>
+						<div class="wi-task-status-col">${isCurrentPill}${sPill}</div>
+					</div>`;
+				});
+				html += `</div></div>`;
+
+				if (frm.fields_dict.html_aseg && frm.fields_dict.html_aseg.$wrapper) {
+					frm.fields_dict.html_aseg.$wrapper.html(html);
+				}
 			}
-		);
+		},
+	});
+}
+
+function empty_fields(frm, fields) {
+	if (!fields) return;
+	if (Array.isArray(fields)) {
+		for (let field of fields) {
+			frm.set_value(field, null);
+		}
+		return;
 	}
 
-	setTimeout(applyLayout, 0);
+	// support object/map of fieldnames
+	for (let field in fields) {
+		if (Object.prototype.hasOwnProperty.call(fields, field)) {
+			frm.set_value(field, null);
+		}
+	}
+}
+
+function add_row_to_table(frm) {
+	if (frm.is_new()) {
+		let child_tables = ["recurrence_date", "recurrence_day_occurrence", "recurrence_time"];
+
+		child_tables.forEach((fieldname) => {
+			if ((frm.doc[fieldname] || []).length === 0) {
+				frm.add_child(fieldname);
+				frm.refresh_field(fieldname);
+			}
+		});
+	}
 }

@@ -19,29 +19,34 @@
    "fieldname": "assignee_from",
    "fieldtype": "Link",
    "label": "Assignee (From) ",
-   "options": "User"
+   "options": "User",
+   "read_only": 1
   },
   {
    "fieldname": "assignee_to",
    "fieldtype": "Link",
    "label": "Assignee (To) ",
-   "options": "User"
+   "options": "User",
+   "read_only": 1
   },
   {
    "fieldname": "work_item_ref",
    "fieldtype": "Link",
    "label": "Work Item Ref",
-   "options": "Work Item"
+   "options": "Work Item",
+   "read_only": 1
   },
   {
    "fieldname": "reassignment_date_time",
    "fieldtype": "Datetime",
-   "label": "Reassignment Date Time"
+   "label": "Reassignment Date Time",
+   "read_only": 1
   },
   {
    "fieldname": "reasonremarks",
    "fieldtype": "Small Text",
-   "label": "Reason/Remarks"
+   "label": "Reason/Remarks",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_zswz",
@@ -51,7 +56,8 @@
    "fieldname": "reassigned_by",
    "fieldtype": "Link",
    "label": "Reassigned By",
-   "options": "User"
+   "options": "User",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_lofn",
@@ -62,7 +68,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 12:51:42.758091",
+ "modified": "2026-03-31 11:46:03.906198",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Reassignment History",

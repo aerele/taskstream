@@ -3,20 +3,47 @@
 
 import json
 from datetime import datetime, time, timedelta
+from functools import wraps
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import cint, get_datetime, now_datetime
+from frappe.utils import get_datetime, now_datetime
 
 from taskstream.taskstream import send_notifications
+from taskstream.taskstream.doctype.work_item_score_summary.work_item_score_summary import (
+	create_summary_record,
+)
+
+
+def safe_exec(func):
+	@wraps(func)
+	def wrapper(*args, **kwargs):
+		try:
+			return func(*args, **kwargs)
+		except Exception:
+			try:
+				frappe.log_error(message=frappe.get_traceback(), title=f"{func.__name__} Error")
+			except Exception:
+				pass
+			frappe.throw("An error occurred, please contact admin")
+
+	return wrapper
 
 
 class WorkItem(Document):
+	@safe_exec
 	def validate(self):
-		if not self.created_on:
-			self.created_on = now_datetime().date()
+		if self.is_new():
+			if self.recurrence_type == "One Time" or self.recurrence_type == "Recurring Instance":
+				is_end_date_not_in_past(self.target_end_date)
+			else:
+				is_end_date_not_in_past(self.repeat_until)
+		if not self.assigned_on:
+			self.assigned_on = now_datetime().date()
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
-			planned_end_exists = any(row.action_type == "Target End Date" for row in self.activities)
+			planned_end_exists = (
+				self.target_end_date
+			)  # any(row.action_type == "Target End Date" for row in self.activities)
 			if not planned_end_exists:
 				frappe.throw("Activities must include one 'Target End Date' entry.")
 
@@ -28,16 +55,20 @@ class WorkItem(Document):
 			):
 				self.validate_recurrence_time()
 
-		if self.status == "In Progress":
+		if self.status == "Open":
 			calculate_planned_target(self)
 
-		if self.status == "Done":
-			calculate_score(self)
-			if self.work_flow_template:
+		calculate_score(self, "Work Item Update")
+		if self.work_flow_template and self.work_flow:
+			if self.idx == 0:
+				self.idx = 1
+			if self.status == "Done":
 				create_sub_task(self, self.idx)
 
+		if self.recurrence_type == "Recurring Instance" and self.status == "Done":
 			self.create_work_item_recurrences()
 
+	@safe_exec
 	def create_work_item_recurrences(self):
 		if not (self.reference_document and self.reference_doctype):
 			return
@@ -46,54 +77,47 @@ class WorkItem(Document):
 			(datetime.fromisoformat(d["date"]).date(), timedelta(seconds=d["time_seconds"]))
 			for d in valid_dates
 		]
-		current_slot = None
-		for rows in self.activities:
-			if rows.action_type == "Target End Date":
-				date_time = rows.time
-				date = date_time.date()
-				t = date_time.time()
-				target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
-				current_slot = (date, target_time)
+		# current_slot = None
+		# for rows in self.activities:
+		# 	if rows.action_type == "Target End Date":
+		# 		date_time = rows.time
+		# 		date = date_time.date()
+		# 		t = date_time.time()
+		# 		target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+		# 		current_slot = (date, target_time)
+
+		target_end_datetime = get_datetime(self.target_end_date)
+		date = target_end_datetime.date()
+		t = target_end_datetime.time()
+		target_time = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+		current_slot = (date, target_time)
 
 		if current_slot and current_slot in valid_dates:
 			current_index = valid_dates.index(current_slot)
 			for next_date in valid_dates[current_index + 1 :]:
 				target_end_datetime = datetime.combine(next_date[0], datetime.min.time()) + next_date[1]
 				existing_wi = bool(
-					frappe.db.sql(
-						"""
-						SELECT 1
-						FROM `tabWork Item` wi
-						INNER JOIN `tabWork Item Log` wil
-							ON wil.parent = wi.name
-							AND wil.parenttype = 'Work Item'
-							AND wil.parentfield = 'activities'
-						WHERE wi.reference_document = %s
-							AND wi.reference_doctype = %s
-							AND wi.summary = %s
-							AND wi.description = %s
-							AND wi.rework_count = 0
-							AND wil.action_type = 'Target End Date'
-							AND wil.time = %s
-						LIMIT 1
-						""",
-						(
-							self.reference_document,
-							self.reference_doctype,
-							self.summary,
-							self.description,
-							target_end_datetime,
-						),
+					frappe.db.exists(
+						"Work Item",
+						{
+							"reference_document": self.reference_document,
+							"reference_doctype": self.reference_doctype,
+							"target_end_date": target_end_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+							"summary": self.summary,
+							"description": self.description,
+						},
 					)
 				)
 				if not existing_wi:
 					create_work_item_recurrences(self, next_date[0], next_date[1])
 					break
 
+	@safe_exec
 	def validate_reviewer(self):
 		if self.reviewer == self.assignee:
 			frappe.throw("Assignee and Reviewer cannot be same")
 
+	@safe_exec
 	def validate_recurrence_date(self):
 		seen = set()
 		for row in self.recurrence_date:
@@ -108,6 +132,7 @@ class WorkItem(Document):
 				frappe.throw("Each recurrence date must be unique!")
 			seen.add(val)
 
+	@safe_exec
 	def validate_recurrence_time(self):
 		seen = set()
 		for row in self.recurrence_time:
@@ -118,6 +143,7 @@ class WorkItem(Document):
 				frappe.throw("Each recurrence time must be unique!")
 			seen.add(val)
 
+	@safe_exec
 	def before_save(self):
 		old_doc = self.get_doc_before_save()
 		if not old_doc:
@@ -137,6 +163,7 @@ class WorkItem(Document):
 		if self.first_mail:
 			sent_noti(self.name)
 
+	@safe_exec
 	def after_insert(self):
 		if self.recurrence_type in ["One Time", "Recurring Instance"]:
 			return
@@ -170,17 +197,24 @@ class WorkItem(Document):
 		frappe.db.commit()
 
 
+def is_end_date_not_in_past(date):
+	now = now_datetime()
+	if get_datetime(date) < now:
+		frappe.throw("End date cannot be in the past.")
+
+
 def _get_valid_dates(self, start_date, end_date):
 	import calendar
 	import datetime as dt
 
 	def _parse_recurrence_time(recurrence_time):
 		try:
-			if isinstance(recurrence_time, timedelta):
-				return recurrence_time
-			hours = int(recurrence_time)
-			return timedelta(hours=hours)
-		except (ValueError, TypeError):
+			if isinstance(recurrence_time, str) and ":" in recurrence_time:
+				t = recurrence_time.split(":")
+				return timedelta(hours=int(t[0]), minutes=int(t[1]), seconds=0)
+			else:
+				return timedelta(hours=int(recurrence_time))
+		except (ValueError, TypeError, IndexError):
 			return timedelta(hours=0)
 
 	parsed_times = [_parse_recurrence_time(t.recurrence_time) for t in self.recurrence_time]
@@ -327,10 +361,14 @@ def check_date_validity(self, valid_dates):
 						if not frappe.db.exists("Holiday", {"holiday_date": date, "parent": holiday_doc}):
 							break
 						date -= timedelta(days=1)
+				if _as_datetime(date, time) < now:
+					continue
 				if (date, time) not in dates and date <= get_datetime(self.repeat_until).date():
 					dates.append((date, time))
 		else:
 			for date, time in valid_dates:
+				if _as_datetime(date, time) < now:
+					continue
 				if date.weekday() <= skip_type:
 					dates.append((date, time))
 
@@ -377,7 +415,7 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	new_wi.rework_count = 0
 	new_wi.revision_count = 0
 	new_wi.recurrence_frequency = 0
-	new_wi.percent_completed
+	new_wi.benefit_of_work_done = 100
 	new_wi.recurrence_type = "Recurring Instance"
 	new_wi.recurrence_date = []
 	new_wi.recurrence_time = []
@@ -387,26 +425,35 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 		time_delta = recurrence_time
 	else:
 		try:
-			time_delta = timedelta(hours=int(recurrence_time))
-		except (ValueError, TypeError):
+			if isinstance(recurrence_time, str) and ":" in recurrence_time:
+				t = recurrence_time.split(":")
+				time_delta = timedelta(hours=int(t[0]), minutes=int(t[1]), seconds=0)
+			else:
+				time_delta = timedelta(hours=int(recurrence_time))
+		except (ValueError, TypeError, IndexError):
 			time_delta = timedelta(hours=0)
 
-	new_wi.append(
-		"activities",
-		{
-			"action_type": "Target End Date",
-			"time": datetime.combine(date, datetime.min.time()) + time_delta,
-		},
-	)
-	new_wi.status = "To Do"
+	# new_wi.append(
+	# 	"activities",
+	# 	{
+	# 		"action_type": "Target End Date",
+	# 		"time": datetime.combine(date, datetime.min.time()) + time_delta,
+	# 	},
+	# )
+	new_wi.target_end_date = datetime.combine(date, datetime.min.time()) + time_delta
+	new_wi.actual_end_date = None
+	new_wi.status = "Open"
 	new_wi.reference_doctype = "Work Item"
-	new_wi.reference_document = wi_doc.name
+	new_wi.reference_document = (
+		wi_doc.reference_document if wi_doc.recurrence_type == "Recurring Instance" else wi_doc.name
+	)
 	new_wi.owner = wi_doc.owner
 	new_wi.save(ignore_permissions=True)
 	return new_wi
 
 
 @frappe.whitelist()
+@safe_exec
 def send_for_review(docname, reviewer):
 	frappe.db.set_value("Work Item", docname, "status", "Under Review")
 	content = f"A work item <b>{docname}</b> has been sent for review.<br><a href='{frappe.utils.get_url()}/app/work-item/{docname}'>View Work Item</a>"
@@ -414,50 +461,56 @@ def send_for_review(docname, reviewer):
 
 
 @frappe.whitelist()
+@safe_exec
 def mark_complete(docname):
 	doc = frappe.get_doc("Work Item", docname)
-
+	if doc.benefit_of_work_done < 1 and doc.review_required == 1:
+		frappe.throw("Please enter a valid benefit of work done")
 	doc.status = "Done"
-	doc.append(
-		"activities",
-		{"action_type": "Actual End Time", "time": now_datetime().replace(second=0, microsecond=0)},
-	)
+	doc.actual_end_date = now_datetime().replace(second=0, microsecond=0)
+	# doc.append(
+	# 	"activities",
+	# 	{"action_type": "Actual End Time", "time": now_datetime().replace(second=0, microsecond=0)},
+	# )
 	doc.save(ignore_permissions=True)
 
 
-@frappe.whitelist()
-def start_now(docname):
-	frappe.db.set_value("Work Item", docname, "status", "In Progress")
-	frappe.db.set_value("Work Item", docname, "first_mail", 1)
+# @frappe.whitelist()
+# def start_now(docname):
+# 	frappe.db.set_value("Work Item", docname, "status", "In Progress")
+# 	frappe.db.set_value("Work Item", docname, "first_mail", 1)
 
 
 @frappe.whitelist()
+@safe_exec
 def resend_for_rework(docname, rework_comments, target_end_date):
 	doc = frappe.get_doc("Work Item", docname)
-	doc.status = "In Progress"
+	doc.status = "Open"
 	doc.rework_count += 1
 	if target_end_date:
-		doc.append(
-			"activities",
-			{
-				"action_type": "Target End Date",
-				"time": get_datetime(target_end_date).replace(second=0, microsecond=0),
-			},
-		)
+		doc.target_end_date = get_datetime(target_end_date).replace(second=0, microsecond=0)
+		# doc.append(
+		# 	"activities",
+		# 	{
+		# 		"action_type": "Target End Date",
+		# 		"time": get_datetime(target_end_date).replace(second=0, microsecond=0),
+		# 	},
+		# )
 	doc.save(ignore_permissions=True)
 	doc.add_comment("Comment", rework_comments)
 	content = f"A work item <b>{docname}</b> has been sent for Rework - {rework_comments}.<br><a href='{frappe.utils.get_url()}/app/work-item/{docname}'>View Work Item</a>"
 	send_notifications(docname, content, to=[doc.assignee])
 
 
+@safe_exec
 def calculate_planned_target(doc):
-	planned_end_time = None
+	# planned_end_time = None
 
-	for row in doc.activities:
-		if row.action_type == "Target End Date" and (planned_end_time is None or row.time > planned_end_time):
-			planned_end_time = row.time
+	# for row in doc.activities:
+	# 	if row.action_type == "Target End Date" and (planned_end_time is None or row.time > planned_end_time):
+	# 		planned_end_time = row.time
 
-	if planned_end_time:
+	if planned_end_time := doc.target_end_date:
 		planned_end_time = get_datetime(planned_end_time)
 		sent_alert_on = frappe.get_single_value("Work Item Configuration", "sent_reminder_before")
 		hr, mm, sec = [int(float(x)) for x in sent_alert_on.split(":")]
@@ -468,6 +521,7 @@ def calculate_planned_target(doc):
 		doc.twenty_percent_reminder_sent = 0
 
 
+@safe_exec
 def ensure_time(value):
 	if isinstance(value, timedelta):
 		total_seconds = int(value.total_seconds())
@@ -521,47 +575,103 @@ def ensure_time(value):
 # 			frappe.log_error("Deadline Reminder Error", f"User {item.assignee} has no valid email.")
 
 
-def calculate_score(doc):
-	if doc.status != "Done":
+@safe_exec
+def calculate_score(doc, type):
+	# if doc.is_new():
+	# 	return
+	# if doc.status != "Done":
+	# 	return
+
+	# planned_end_time = None
+	# actual_end_time = None
+	# for row in doc.activities:
+	# if row.action_type == "Target End Date":
+	# 	if planned_end_time is None or row.time > planned_end_time:
+	# 		planned_end_time = row.time
+	# elif row.action_type == "Actual End Time":
+	# if actual_end_time is None or row.time > actual_end_time:
+	# 	actual_end_time = row.time
+
+	planned_end_time = get_datetime(doc.target_end_date) if doc.target_end_date else None
+	actual_end_time = get_datetime(doc.actual_end_date) if doc.actual_end_date else now_datetime()
+
+	if not planned_end_time:
 		return
 
-	planned_end_time = None
-	actual_end_time = None
-	for row in doc.activities:
-		if row.action_type == "Target End Date":
-			if planned_end_time is None or row.time > planned_end_time:
-				planned_end_time = row.time
-		elif row.action_type == "Actual End Time":
-			if actual_end_time is None or row.time > actual_end_time:
-				actual_end_time = row.time
+	# if actual_end_time <= planned_end_time:
+	# 	doc.score = 0
+	# 	return
 
-	planned_end_time = get_datetime(planned_end_time)
-	actual_end_time = get_datetime(actual_end_time)
-
-	if not (planned_end_time and actual_end_time):
-		return
-
-	if actual_end_time <= planned_end_time:
-		doc.score = 0
-		return
-
-	config = frappe.get_single("Work Item Configuration")
-	total_delay_minutes = (actual_end_time - planned_end_time).total_seconds() / 60
-	if total_delay_minutes < 1440:
-		delay_penalty = total_delay_minutes * config.penalty_per_minute
+	if actual_end_time:
+		config = frappe.get_single("Work Item Configuration")
+		total_delay_minutes = (actual_end_time - planned_end_time).total_seconds() / 60
+		if actual_end_time <= planned_end_time:
+			delay_penalty = 0
+		elif total_delay_minutes < 1440:
+			delay_penalty = total_delay_minutes * config.penalty_per_minute
+		else:
+			delay_penalty = ((total_delay_minutes // 1440) * config.penalty_points_per_day) + (
+				(total_delay_minutes % 1440) * config.penalty_per_minute
+			)
+		delay_penalty = min(delay_penalty, config.max_delay_penalty)
 	else:
-		delay_penalty = ((total_delay_minutes // 1440) * config.penalty_points_per_day) + (
-			(total_delay_minutes % 1440) * config.penalty_per_minute
-		)
-	delay_penalty = min(delay_penalty, config.max_delay_penalty)
-	revision_penalty = (doc.revision_count / config.max_allowed_revision) * config.revision_impact
-	rework_penalty = (doc.rework_count / config.max_allowed_rework) * config.rework_impact
+		delay_penalty = 0
+	benefit_penalty = _get_benefit_penelty(doc.benefit_of_work_done, config.completion_score)
+	revision_penalty = ((doc.revision_count or 0) / config.max_allowed_revision) * config.revision_impact
+	rework_penalty = ((doc.rework_count or 0) / config.max_allowed_rework) * config.rework_impact
 	rework_penalty = min(rework_penalty, config.max_rework_penalty)
-	total_score = 0 - delay_penalty - revision_penalty - rework_penalty
+	total_score = 0 - benefit_penalty - delay_penalty - revision_penalty - rework_penalty
 	doc.score = max(total_score, -100)
+	if doc.is_new():
+		return
+	doc.score_summary = score_summary(
+		delay_penalty,
+		rework_penalty,
+		revision_penalty,
+		benefit_penalty,
+		doc.score,
+		doc.target_end_date,
+		doc.actual_end_date,
+		total_delay_minutes,
+		config.penalty_per_minute,
+		doc.rework_count,
+		config.rework_impact,
+		config.max_allowed_rework,
+		config.max_rework_penalty,
+		doc.revision_count,
+		config.revision_impact,
+		config.max_allowed_revision,
+		max_delay_points=config.max_delay_penalty,
+		benefit_of_work_done=doc.benefit_of_work_done,
+		completion_score=config.completion_score,
+	)
+	# run create_summary_record if type = Scheduled Job or if there are changes in score, status, rework_count, revision_count, target_end_date (check with data before save)
+	if type == "Scheduled Job" or (
+		type == "Work Item Update"
+		and any(
+			doc.has_value_changed(f)
+			for f in ("score", "status", "rework_count", "revision_count", "target_end_date")
+		)
+	):
+		create_summary_record(doc.score_summary, doc.name, doc.score, type)
 
 
 @frappe.whitelist()
+@safe_exec
+def recalculate_score(docname):
+	doc = frappe.get_doc("Work Item", docname)
+	calculate_score(doc, "Work Item Update")
+	doc.save()
+
+
+@safe_exec
+def _get_benefit_penelty(benefit_of_work_done, completion_score):
+	benefit_of_work_done = 100 - float(benefit_of_work_done or 0)
+	return (benefit_of_work_done / 100) * completion_score
+
+
+@frappe.whitelist()
+@safe_exec
 def sent_noti(work_item):
 	doc = frappe.get_doc("Work Item", work_item)
 	to = []
@@ -583,30 +693,35 @@ def sent_noti(work_item):
 		send_notifications(doc.name, content, to)
 
 
+@safe_exec
 def create_sub_task(self, idx):
 	if frappe.db.exists("Work Flow Template Item", {"parent": self.work_flow_template, "idx": idx + 1}):
 		task = frappe.get_doc("Work Flow Template Item", {"parent": self.work_flow_template, "idx": idx + 1})
 		doc = frappe.copy_doc(self)
 		doc.activities = []
-		doc.status = "To Do"
+		doc.status = "Open"
 		doc.summary = task.task_name
 		doc.idx = idx + 1
 		doc.description = task.task_description
 		doc.assignee = task.assignee or self.assignee  # TODO: implementation based on role
 		hours_as_float = task.target_end_date_time.total_seconds() / 3600
 
-		doc.append(
-			"activities",
-			{
-				"action_type": "Target End Date",
-				"time": (now_datetime() + timedelta(hours=hours_as_float)).replace(second=0, microsecond=0),
-			},
+		# doc.append(
+		# 	"activities",
+		# 	{
+		# 		"action_type": "Target End Date",
+		# 		"time": (now_datetime() + timedelta(hours=hours_as_float)).replace(second=0, microsecond=0),
+		# 	},
+		# )
+		doc.target_end_date = (now_datetime() + timedelta(hours=hours_as_float)).replace(
+			second=0, microsecond=0
 		)
 		doc.save(ignore_permissions=True)
 		sent_noti(doc.name)
 
 
 @frappe.whitelist()
+@safe_exec
 def update_target_end_on_start_date_change(work_flow_template, start_date_time):
 	duration = frappe.get_value(
 		"Work Flow Template Item", {"parent": work_flow_template, "idx": 1}, "target_end_date_time"
@@ -617,16 +732,17 @@ def update_target_end_on_start_date_change(work_flow_template, start_date_time):
 
 
 @frappe.whitelist()
+@safe_exec
 def time_extension_request(doc, reason, req_target_date_time):
 	doc = frappe.get_doc("Work Item", doc)
 	to = []
-	for row in doc.activities:
-		if row.action_type == "Target End Date":
-			current_target_date = row.time
+	# for row in doc.activities:
+	# 	if row.action_type == "Target End Date":
+	# 		current_target_date = row.time
 
 	ext_doc = frappe.new_doc("Work Item Time Extension")
 	ext_doc.work_item_reference = doc.name
-	ext_doc.current_target_date = current_target_date
+	ext_doc.current_target_date = doc.target_end_date
 	ext_doc.requested_due_date = req_target_date_time
 	ext_doc.reason = reason
 	ext_doc.requester = doc.assignee
@@ -641,6 +757,7 @@ def time_extension_request(doc, reason, req_target_date_time):
 
 
 @frappe.whitelist()
+@safe_exec
 def reassign(wi, new_assignee, current_assignee, reason):
 	reassign_doc = frappe.new_doc("Reassignment History")
 	reassign_doc.work_item_ref = wi
@@ -660,6 +777,7 @@ def reassign(wi, new_assignee, current_assignee, reason):
 
 
 @frappe.whitelist()
+@safe_exec
 def apply_updates_to_work_item(docname, updates, one_time=False, change_date=None):
 	updates = json.loads(updates)
 	if one_time and change_date:
@@ -671,20 +789,29 @@ def apply_updates_to_work_item(docname, updates, one_time=False, change_date=Non
 		_update_work_item(docname, updates)
 
 
+@safe_exec
 def _get_work_item(docname, change_date=None):
+	# query = """
+	#     SELECT DISTINCT wi.name
+	#     FROM `tabWork Item` wi
+	#     INNER JOIN `tabWork Item Log` wil
+	#         ON wil.parent = wi.name
+	#         AND wil.parenttype = 'Work Item'
+	#         AND wil.parentfield = 'activities'
+	#     WHERE wi.reference_document = %s
+	#         AND wi.reference_doctype = 'Work Item'
+	#         AND wi.status != 'Done'
+	#         AND wi.status != 'Under Review'
+	#         AND wi.status != 'In Progress'
+	#         AND wil.action_type = 'Target End Date'
+	# """
 	query = """
         SELECT DISTINCT wi.name
         FROM `tabWork Item` wi
-        INNER JOIN `tabWork Item Log` wil
-            ON wil.parent = wi.name
-            AND wil.parenttype = 'Work Item'
-            AND wil.parentfield = 'activities'
         WHERE wi.reference_document = %s
             AND wi.reference_doctype = 'Work Item'
             AND wi.status != 'Done'
             AND wi.status != 'Under Review'
-            AND wi.status != 'In Progress'
-            AND wil.action_type = 'Target End Date'
     """
 	params = [docname]
 
@@ -693,12 +820,18 @@ def _get_work_item(docname, change_date=None):
 		start_dt = target_dt.replace(hour=0, minute=0, second=0, microsecond=0)
 		end_dt = target_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-		query += " AND wil.time BETWEEN %s AND %s"
+		query += " AND wi.target_end_date BETWEEN %s AND %s"
 		params.extend([start_dt, end_dt])
 
-	return frappe.db.sql(query, tuple(params))
+	if not change_date:
+		work_item = frappe.db.sql(query, tuple(params))
+		work_item = work_item[1:]
+		return work_item
+	else:
+		return frappe.db.sql(query, tuple(params))
 
 
+@safe_exec
 def _update_work_item(item_name, updates):
 	fields_restricted = ["status", "assignee", "reference_document", "reference_doctype", "recurrence_type"]
 	work_item = frappe.get_doc("Work Item", item_name)
@@ -724,7 +857,128 @@ def _update_work_item(item_name, updates):
 			work_item.after_insert()
 
 
+@safe_exec
 def _purge_work_item(docname):
 	work_items = _get_work_item(docname)
 	for item in work_items:
 		frappe.delete_doc("Work Item", item[0], force=True)
+
+
+@frappe.whitelist()
+@safe_exec
+def get_wft_data(wft):
+	return frappe.get_doc("Work Flow Template Item", {"parent": wft, "idx": 1})
+
+
+@safe_exec
+def score_summary(
+	delay_penalty,
+	rework_penalty,
+	revision_penalty,
+	benefit_penalty,
+	total_penalty,
+	target_end_date,
+	actual_end_date,
+	delay_time,
+	ppm,
+	rework_count,
+	rework_impact,
+	max_allowed_rework,
+	max_rework_penalty,
+	revision_count,
+	revision_impact,
+	max_allowed_revision,
+	max_delay_points,
+	benefit_of_work_done,
+	completion_score,
+):
+	delay_hours = delay_time / 60
+
+	summary = "Delay Penalty          : " + str(round(delay_penalty, 2)) + " <br>"
+	summary += "Revision Penalty       : " + str(round(revision_penalty, 2)) + " <br>"
+	summary += "Rework Penalty         : " + str(round(rework_penalty, 2)) + " <br>"
+	summary += "Benefit Penalty        : " + str(round(benefit_penalty, 2)) + " <br>"
+	summary += "-----------------------------" + " <br>"
+	summary += "Total Penalty          : " + str(round(total_penalty, 2)) + " <br>"
+	summary += "-----------------------------" + " <br>"
+
+	summary += "<b><u>Delay Penalty Breakdown</u></b>" + " <br>"
+	summary += "<ul>"
+	summary += "<li>Planned Target Time: " + str(target_end_date) + "</li>"
+	summary += "<li>Actual Target Time: " + str(actual_end_date) + "</li>"
+	summary += "<li>Delay Hours: " + str(round(delay_hours, 2)) + "</li>"
+	summary += "<li>Max Delay Points: " + str(max_delay_points) + "</li>"
+	summary += "</ul>"
+	summary += "<u>Delay Penalty Calculation</u><br>"
+	summary += "Penalty Points per Minute: " + str(ppm) + "<br>"
+	summary += (
+		"Delay Penalty: ("
+		+ str(round(delay_hours, 2))
+		+ " * 60 * "
+		+ str(round(ppm, 2))
+		+ ") = "
+		+ str(round(delay_hours * 60 * round(ppm, 2), 2))
+		+ " or "
+		+ str(round(max_delay_points, 2))
+		+ "(Whichever is lowest)"
+		+ "<br><br>"
+	)
+
+	summary += "<b><u>Rework Penalty Breakdown</u></b>"
+	summary += "<ul>"
+	summary += "<li>Rework count: " + str(rework_count) + "</li>"
+	summary += "<li>Rework Impact: " + str(rework_impact) + "</li>"
+	summary += "<li>Max Rework Penalty: " + str(max_rework_penalty) + "</li>"
+	summary += "<li>Max allowed rework: " + str(max_allowed_rework) + "</li>"
+	summary += "</ul>"
+	summary += "<u>Rework Penalty Calculation</u><br>"
+	summary += (
+		"Rework Penalty: (("
+		+ str(rework_count)
+		+ " / "
+		+ str(max_allowed_rework)
+		+ ") * "
+		+ str(rework_impact)
+		+ " = "
+		+ str(((rework_count or 0) / max_allowed_rework) * rework_impact)
+		+ " or "
+		+ str(round(max_rework_penalty, 2))
+		+ "(Whichever is lowest)"
+		+ "<br><br>"
+	)
+
+	summary += "<b><u>Revision Penalty Breakdown</u></b>"
+	summary += "<ul>"
+	summary += "<li>Revision count: " + str(revision_count) + "</li>"
+	summary += "<li>Revision Impact: " + str(revision_impact) + "</li>"
+	summary += "<li>Max allowed revision: " + str(max_allowed_revision) + "</li>"
+	summary += "</ul>"
+	summary += "<u>Revision Penalty Calculation</u><br>"
+	summary += (
+		"Revision Penalty: (("
+		+ str(revision_count)
+		+ " / "
+		+ str(max_allowed_revision)
+		+ ") * "
+		+ str(revision_impact)
+		+ " = "
+		+ str(round(((revision_count or 0) / max_allowed_revision) * revision_impact, 2))
+		+ "<br><br>"
+	)
+
+	summary += "<b><u>Work Benefit Penalty Breakdown</u></b>"
+	summary += "<ul>"
+	summary += "<li>Work Benefit of Work Done %: " + str(benefit_of_work_done) + "</li>"
+	summary += "<li>Benefit Penalty Weightage: " + str(completion_score) + "</li>"
+	summary += "</ul>"
+	summary += "<u>Work Benefit Penalty Calculation</u><br>"
+	summary += (
+		"Work Benefit Penalty: ((100 - "
+		+ str(benefit_of_work_done)
+		+ "%) of "
+		+ str(completion_score)
+		+ ") = "
+		+ str(round(((100 - (int(benefit_of_work_done) or 0)) / completion_score), 2))
+	)
+
+	return summary

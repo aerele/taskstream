@@ -29,7 +29,13 @@
   "include_saturday_nonemp",
   "notification_tab",
   "email_alert",
-  "system_notification"
+  "system_notification",
+  "report_tab",
+  "column_break_beks",
+  "reporting_frequency",
+  "no_of_cycles_in_report",
+  "last_executed_on",
+  "starting_date"
  ],
  "fields": [
   {
@@ -188,6 +194,42 @@
    "label": "Max File Attachment Size",
    "non_negative": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "report_tab",
+   "fieldtype": "Tab Break",
+   "label": "Report"
+  },
+  {
+   "default": "7",
+   "fieldname": "reporting_frequency",
+   "fieldtype": "Int",
+   "label": "Reporting Frequency",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "default": "3",
+   "fieldname": "no_of_cycles_in_report",
+   "fieldtype": "Int",
+   "label": "No of Cycles in Report",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_executed_on",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Last executed on"
+  },
+  {
+   "fieldname": "starting_date",
+   "fieldtype": "Date",
+   "label": "Starting Reporting From"
+  },
+  {
+   "description": "All Fields in this can only be set once",
+   "fieldname": "column_break_beks",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
@@ -195,7 +237,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-18 12:41:22.510056",
+ "modified": "2026-04-13 16:30:02.264397",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item Configuration",
