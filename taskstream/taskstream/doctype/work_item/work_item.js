@@ -189,6 +189,7 @@ frappe.ui.form.on("Work Item", {
 							fieldname: "req_target_date_time",
 							fieldtype: "Datetime",
 							reqd: 1,
+							default: frm.doc.target_end_date,
 						},
 						{
 							label: "Reason",
