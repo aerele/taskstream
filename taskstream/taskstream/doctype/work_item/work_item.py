@@ -7,6 +7,7 @@ from functools import wraps
 
 import frappe
 from frappe.model.document import Document
+from frappe.model.naming import make_autoname
 from frappe.utils import get_datetime, now_datetime
 
 from taskstream.taskstream import send_notifications
@@ -33,6 +34,13 @@ def safe_exec(func):
 
 
 class WorkItem(Document):
+	def autoname(self):
+		is_recurring_selected = self.recurrence_type not in ("One Time", "Recurring Instance")
+		if is_recurring_selected and not getattr(self, "reference_document", None):
+			self.name = make_autoname("WIM-.####", self.doctype)
+		else:
+			self.name = make_autoname("WI-.####", self.doctype)
+
 	@safe_exec
 	def validate(self):
 		if self.is_new():
