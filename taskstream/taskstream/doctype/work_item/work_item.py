@@ -192,9 +192,11 @@ class WorkItem(Document):
 
 		if len(creatable_values) > creation_limit:
 			creatable_values = creatable_values[:creation_limit]
-
-		for value in creatable_values:
-			create_work_item_recurrences(self, value[0], value[1])
+		if len(creatable_values) > 0:
+			for value in creatable_values:
+				create_work_item_recurrences(self, value[0], value[1])
+		else:
+			create_work_item_recurrences(self, values[0][0], values[0][1])
 
 		frappe.db.commit()
 
