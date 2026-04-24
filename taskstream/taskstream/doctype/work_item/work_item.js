@@ -20,6 +20,7 @@ frappe.ui.form.on("Work Item", {
 		setup_two_col_layout(frm);
 		add_recalculate_score_button(frm);
 		set_wft_tasks(frm, frm.doc.work_flow_template);
+		setTimeout(() => render_recurrence_calendar(frm), 300);
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
 		const allowed = !(type === "One Time" || type === "Recurring Instance");
@@ -325,6 +326,15 @@ frappe.ui.form.on("Work Item", {
 			if (detailsTab) {
 				detailsTab.set_active();
 			}
+			// Default to Daily so the calendar renders immediately on tab open.
+			// "One Time" is not meaningful for a recurring task and causes the
+			// calendar to skip rendering.
+			if (!frm.doc.recurrence_type || frm.doc.recurrence_type === "One Time") {
+				frm.set_value("recurrence_type", "Daily");
+			} else {
+				// Type already set — render the calendar after the tab is active
+				setTimeout(() => render_recurrence_calendar(frm), 400);
+			}
 		} else {
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
 			const detailsTab = (frm.layout?.tabs || []).find(
@@ -456,6 +466,10 @@ frappe.ui.form.on("Work Item", {
 		update_recurrence_description(frm);
 	},
 
+	repeat_until(frm) {
+		update_recurrence_description(frm);
+	},
+
 	work_flow_template(frm) {
 		setup_work_flow_template(frm);
 		set_target_end_date_time(frm);
@@ -537,155 +551,423 @@ function validate_recurrence_time(frm, cdt, cdn) {
 	let row = locals[cdt][cdn];
 	let val = row.recurrence_time;
 
-	if (val) {
-		let is_duplicate = false;
+	if (!val) return;
 
-		frm.doc.recurrence_time.forEach((d) => {
-			if (d.name !== row.name && d.recurrence_time === val) {
-				is_duplicate = true;
-			}
-		});
+	if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(val)) {
+		frappe.msgprint(__("Please enter time in HH:MM format (e.g. 09:30)"));
+		frappe.model.set_value(cdt, cdn, "recurrence_time", "");
+		return;
+	}
 
-		if (is_duplicate && val == 10) {
-			frappe.model.set_value(cdt, cdn, "recurrence_time", "");
-		} else if (is_duplicate) {
-			frappe.msgprint(__("Recurrence time cannot be repeated!"));
-			frappe.model.set_value(cdt, cdn, "recurrence_time", "");
-		}
+	const is_duplicate = frm.doc.recurrence_time.some(
+		(d) => d.name !== row.name && d.recurrence_time === val
+	);
+	if (is_duplicate) {
+		frappe.msgprint(__("Recurrence time cannot be repeated!"));
+		frappe.model.set_value(cdt, cdn, "recurrence_time", "");
 	}
 }
 
 function update_recurrence_description(frm) {
-	const freq = frm.doc.recurrence_frequency || 1;
+	const freq = parseInt(frm.doc.recurrence_frequency) || 1;
 	const type = frm.doc.recurrence_type || "";
 
-	const weekdays = (frm.doc.recurrence_day || []).map((r) => r.weekday);
-	const day_order = {
-		Sunday: 0,
-		Monday: 1,
-		Tuesday: 2,
-		Wednesday: 3,
-		Thursday: 4,
-		Friday: 5,
-		Saturday: 6,
-	};
-	const sorted_days = weekdays.sort((a, b) => day_order[a] - day_order[b]);
-
-	const times = (frm.doc.recurrence_time || []).map((d) => d.recurrence_time).filter(Boolean);
-	const dates = (frm.doc.recurrence_date || []).map((d) => d.recurrence_date).filter(Boolean);
-	const months = (frm.doc.recurrence_month || []).map((d) => d.month).filter(Boolean);
-
-	const formatTimes = (times) => {
-		if (!times.length) return "";
-		const sorted = times.sort((a, b) => a - b).map((h) => `${h}:00`);
-		return " at " + sorted.join(", ") + " hrs";
+	// Ordinal suffix: 1 → "1st", 2 → "2nd", 3 → "3rd", 4 → "4th" …
+	const ordinal = (n) => {
+		const s = ["th", "st", "nd", "rd"];
+		const v = n % 100;
+		return n + (s[(v - 20) % 10] || s[v] || s[0]);
 	};
 
-	const formatDates = (date) => {
-		if (!dates.length) return "";
-		const sorted = dates.sort((a, b) => a - b);
-		return " on " + sorted.join(", ");
+	// "every day" / "every other day" / "every 3rd day"
+	const freqPhrase = (unit) => {
+		if (freq === 1) return `every ${unit}`;
+		if (freq === 2) return `every other ${unit}`;
+		return `every ${ordinal(freq)} ${unit}`;
 	};
 
-	const formatMonths = (months) => {
-		if (!months.length) return "";
-		const order = [
-			"January",
-			"February",
-			"March",
-			"April",
-			"May",
-			"June",
-			"July",
-			"August",
-			"September",
-			"October",
-			"November",
-			"December",
-		];
-		const sorted = months.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-		return " in " + sorted.join(", ");
-	};
+	// "until Apr 30, 2026"
+	const untilSuffix = frm.doc.repeat_until
+		? ` until ${moment(frm.doc.repeat_until).format("MMM D, YYYY")}`
+		: "";
 
-	// if (type === "Weekly" && !weekdays.length) {
-	// 	const desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
-	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
-	// 	// frm.fields_dict.recurrence_day.set_description("");
-	// 	return;
-	// }
+	const DAY_ORDER = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
+	const MONTH_ORDER = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-	// if (
-	// 	type === "Monthly" &&
-	// 	!(frm.doc.recurrence_date?.length || frm.doc.recurrence_day_occurrence?.length)
-	// ) {
-	// 	const desc = `Every ${freq} month${freq > 1 ? "s" : ""}`;
-	// 	frm.set_value("recurrence_description", desc);
-	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
-	// 	// frm.fields_dict.monthly_recurrence_based_on.set_description("");
-	// 	return;
-	// }
+	const sorted_days = (frm.doc.recurrence_day || [])
+		.map((r) => r.weekday)
+		.sort((a, b) => DAY_ORDER[a] - DAY_ORDER[b]);
 
-	// if (type === "Yearly" && !months.length && !times.length) {
-	// 	const desc = `Every ${freq} year${freq > 1 ? "s" : ""}`;
-	// 	frm.set_value("recurrence_description", desc);
-	// 	// frm.fields_dict.recurrence_frequency.set_description(desc);
-	// 	// frm.fields_dict.recurrence_month.set_description("");
-	// 	return;
-	// }
+	const sorted_months = (frm.doc.recurrence_month || [])
+		.map((r) => r.month)
+		.sort((a, b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
+
+	const rec_dates = (frm.doc.recurrence_date || [])
+		.map((r) => parseInt(r.recurrence_date))
+		.filter(Boolean)
+		.sort((a, b) => a - b)
+		.map(ordinal);
+
+	const sorted_times = (frm.doc.recurrence_time || [])
+		.map((r) => (r.recurrence_time || "").slice(0, 5))
+		.filter(Boolean)
+		.sort();
+	const timeSuffix = sorted_times.length ? ` at ${sorted_times.join(", ")}` : "";
+
+	if (!type || type === "One Time" || type === "Recurring Instance") {
+		frm.set_value("recurrence_description", "");
+		render_recurrence_calendar(frm);
+		return;
+	}
+
+	let desc = "";
+
 	if (type === "Daily") {
-		frm.set_value("recurrence_description", null);
+		desc = `Occurs ${freqPhrase("day")}`;
 	}
 
 	if (type === "Weekly") {
-		let desc = `Every ${freq} week${freq > 1 ? "s" : ""}`;
+		desc = `Occurs ${freqPhrase("week")}`;
 		if (sorted_days.length) {
-			desc += " on " + sorted_days.join(", ");
+			desc += ` on ${sorted_days.join(", ")}`;
 		}
-		desc += formatTimes(times);
-		frm.set_value("recurrence_description", desc);
-		// frm.fields_dict.recurrence_details_column.set_description(desc);
-		// frm.fields_dict.recurrence_frequency.set_description("");
-		return;
 	}
 
 	if (type === "Monthly") {
-		const base = `Every ${freq} month${freq > 1 ? "s" : ""}`;
-		let desc = base;
-
-		if (frm.doc.monthly_recurrence_based_on === "Date") {
-			desc += formatDates(dates) + formatTimes(times);
-			// frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
-			frm.set_value("recurrence_description", desc);
+		desc = `Occurs ${freqPhrase("month")}`;
+		if (frm.doc.monthly_recurrence_based_on === "Date" && rec_dates.length) {
+			desc += ` on the ${rec_dates.join(", ")}`;
 		} else if (frm.doc.monthly_recurrence_based_on === "Day") {
-			const occurrences = (frm.doc.recurrence_day_occurrence || []).map(
-				(d) => `${d.week_order} ${d.weekday}`
-			);
+			const occurrences = (frm.doc.recurrence_day_occurrence || [])
+				.map((d) => `${d.week_order} ${d.weekday}`);
 			if (occurrences.length) {
-				desc += " on " + occurrences.join(", ");
+				desc += ` on the ${occurrences.join(", ")}`;
 			}
-			desc += formatTimes(times);
-			// frm.fields_dict.monthly_recurrence_based_on.set_description(desc);
-			frm.set_value("recurrence_description", desc);
-		} else {
-			frm.set_value("recurrence_description", desc);
-			// frm.fields_dict.recurrence_frequency.set_description(base);
-			// frm.fields_dict.monthly_recurrence_based_on.set_description("");
 		}
-
-		// frm.fields_dict.recurrence_frequency.set_description("");
-		// frm.fields_dict.recurrence_day?.set_description("");
-		// frm.set_value("recurrence_description", "");
-		return;
 	}
 
 	if (type === "Yearly") {
-		let desc = `Every ${freq} year${freq > 1 ? "s" : ""}`;
-		desc += formatMonths(months) + formatDates(dates) + formatTimes(times);
-		// frm.fields_dict.recurrence_month.set_description(desc);
-		// frm.fields_dict.recurrence_frequency.set_description("");
-		frm.set_value("recurrence_description", desc);
+		desc = `Occurs ${freqPhrase("year")}`;
+		if (sorted_months.length) {
+			desc += ` in ${sorted_months.join(", ")}`;
+		}
+		if (rec_dates.length) {
+			desc += ` on the ${rec_dates.join(", ")}`;
+		}
+	}
+
+	desc += timeSuffix + untilSuffix;
+
+	frm.set_value("recurrence_description", desc);
+	render_recurrence_calendar(frm);
+}
+
+function render_recurrence_calendar(frm) {
+	const type = frm.doc.recurrence_type;
+
+	// Clear and exit for non-recurring types
+	if (!type || type === "One Time") {
+		frm.set_df_property("recurrence_calendar_html", "options", "");
+		frm.refresh_field("recurrence_calendar_html");
 		return;
 	}
+
+	// Recurring Instance: fetch master config, highlight this instance's target date
+	if (type === "Recurring Instance") {
+		const masterName = frm.doc.reference_document;
+		if (!masterName || frm.doc.reference_doctype !== "Work Item") {
+			frm.set_df_property("recurrence_calendar_html", "options", "");
+			frm.refresh_field("recurrence_calendar_html");
+			return;
+		}
+		frappe.db.get_doc("Work Item", masterName).then((master) => {
+			_render_cal_from_doc(frm, master, frm.doc.target_end_date);
+		});
+		return;
+	}
+
+	_render_cal_from_doc(frm, frm.doc, null);
+}
+
+function _render_cal_from_doc(frm, doc, instanceDatetime) {
+	const toLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	const dates = compute_recurrence_dates(doc);
+	const dateSet = new Set(dates.map(toLocalDate));
+
+	// YYYY-MM-DD of this instance's target_end_date (null for master/normal view)
+	const instanceDate = instanceDatetime ? toLocalDate(new Date(instanceDatetime)) : null;
+
+	// Build month list from computed dates; fall back to current month
+	const months = [];
+	const seen = new Set();
+	for (const d of dates) {
+		const key = `${d.getFullYear()}-${d.getMonth()}`;
+		if (!seen.has(key)) {
+			seen.add(key);
+			months.push({ year: d.getFullYear(), month: d.getMonth() });
+		}
+	}
+	if (!months.length) {
+		const now = new Date();
+		months.push({ year: now.getFullYear(), month: now.getMonth() });
+	}
+
+	// For instances: focus on the month of target_end_date.
+	// For normal: preserve the user's current month position.
+	let index;
+	if (instanceDate) {
+		const [iYear, iMonth] = instanceDate.split("-").map(Number);
+		const found = months.findIndex((m) => m.year === iYear && m.month === iMonth - 1);
+		index = found !== -1 ? found : 0;
+	} else {
+		const prevIndex = frm._wi_cal?.index ?? 0;
+		index = Math.min(prevIndex, months.length - 1);
+	}
+
+	frm._wi_cal = { months, dateSet, index, instanceDate };
+
+	// Wire nav clicks once per form — event delegation survives field refreshes
+	if (!frm._wi_cal_handler_set) {
+		frm._wi_cal_handler_set = true;
+		$(frm.wrapper).on("click.wi-cal", ".wi-cal-nav-btn", function () {
+			const dir = parseInt($(this).data("dir"));
+			if (!frm._wi_cal) return;
+			const next = frm._wi_cal.index + dir;
+			if (next < 0 || next >= frm._wi_cal.months.length) return;
+			frm._wi_cal.index = next;
+			const html = wi_cal_build_html(frm._wi_cal.months, frm._wi_cal.dateSet, frm._wi_cal.index, frm._wi_cal.instanceDate);
+			frm.set_df_property("recurrence_calendar_html", "options", html);
+			frm.refresh_field("recurrence_calendar_html");
+		});
+	}
+
+	wi_cal_inject_styles();
+
+	const do_render = () => {
+		const html = wi_cal_build_html(months, dateSet, index, instanceDate);
+		frm.set_df_property("recurrence_calendar_html", "options", html);
+		frm.refresh_field("recurrence_calendar_html");
+	};
+	do_render();
+	setTimeout(do_render, 50);
+}
+
+function wi_cal_build_html(months, dateSet, index, instanceDate) {
+	const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+	const DAY_LABELS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+	const { year, month } = months[index];
+	const firstDay = new Date(year, month, 1).getDay();
+	const daysInMonth = new Date(year, month + 1, 0).getDate();
+	const toLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	const today = toLocalDate(new Date());
+	const hasPrev = index > 0;
+	const hasNext = index < months.length - 1;
+
+	let grid = "";
+	for (const label of DAY_LABELS) {
+		grid += `<div class="wi-cal-cell wi-cal-day-label">${label}</div>`;
+	}
+	for (let i = 0; i < firstDay; i++) {
+		grid += `<div class="wi-cal-cell"></div>`;
+	}
+	for (let day = 1; day <= daysInMonth; day++) {
+		const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+		const isInstance = instanceDate && iso === instanceDate;
+		const classes = ["wi-cal-cell", "wi-cal-date",
+			isInstance ? "wi-cal-instance-date" : (dateSet.has(iso) ? "wi-cal-highlighted" : ""),
+			iso === today ? "wi-cal-today" : "",
+		].filter(Boolean).join(" ");
+		grid += `<div class="${classes}">${day}</div>`;
+	}
+
+	return `<div class="wi-recurrence-cal">
+		<div class="wi-cal-nav">
+			<button class="wi-cal-nav-btn ${hasPrev ? "" : "wi-cal-nav-disabled"}" data-dir="-1">&#8249;</button>
+			<span class="wi-cal-header">${MONTH_NAMES[month]} ${year}</span>
+			<button class="wi-cal-nav-btn ${hasNext ? "" : "wi-cal-nav-disabled"}" data-dir="1">&#8250;</button>
+		</div>
+		<div class="wi-cal-grid">${grid}</div>
+	</div>`;
+}
+
+function wi_cal_inject_styles() {
+	if (document.getElementById("wi-recurrence-cal-style")) return;
+	$("head").append(`<style id="wi-recurrence-cal-style">
+		.wi-recurrence-cal {
+			margin-top: 10px;
+			border: 1px solid var(--border-color);
+			border-radius: 12px;
+			padding: 14px 16px 18px;
+			background: var(--card-bg);
+			box-sizing: border-box;
+		}
+		.wi-cal-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin: -14px -16px 12px -16px;
+			padding: 8px 10px;
+			background: var(--bg-light-gray, #f4f5f6);
+			border-radius: 12px 12px 0 0;
+		}
+		.wi-cal-nav-btn {
+			background: none;
+			border: none;
+			cursor: pointer;
+			font-size: 22px;
+			line-height: 1;
+			color: var(--text-muted);
+			padding: 2px 6px;
+			border-radius: var(--border-radius);
+			transition: background 0.15s, color 0.15s;
+		}
+		.wi-cal-nav-btn:hover:not(.wi-cal-nav-disabled) {
+			background: var(--btn-default-bg);
+			color: var(--text-color);
+		}
+		.wi-cal-nav-disabled { opacity: 0.25; cursor: default; pointer-events: none; }
+		.wi-cal-header {
+			font-size: 13px;
+			font-weight: 600;
+			color: var(--text-color);
+		}
+		.wi-cal-grid {
+			display: grid;
+			grid-template-columns: repeat(7, 1fr);
+			row-gap: 8px;
+			column-gap: 4px;
+		}
+		.wi-cal-cell {
+			aspect-ratio: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 13px;
+			border-radius: 6px;
+			color: var(--text-color);
+			box-sizing: border-box;
+		}
+		.wi-cal-day-label {
+			aspect-ratio: auto;
+			height: 22px;
+			font-size: 10px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: var(--text-muted);
+			border-radius: 0;
+		}
+		.wi-cal-highlighted {
+			border: 2px solid #3b82f6;
+			color: #3b82f6;
+			font-weight: 600;
+		}
+		.wi-cal-today:not(.wi-cal-highlighted) {
+			border: 1.5px solid var(--primary);
+			color: var(--primary);
+			font-weight: 600;
+		}
+		.wi-cal-today.wi-cal-highlighted {
+			border: 2px solid #3b82f6;
+			background: rgba(59, 130, 246, 0.1);
+			color: #3b82f6;
+			font-weight: 600;
+		}
+		.wi-cal-instance-date {
+			background: #3b82f6;
+			color: #fff !important;
+			font-weight: 700;
+			border: 2px solid #1d4ed8;
+			border-radius: 6px;
+		}
+		.wi-cal-instance-date.wi-cal-today {
+			background: #1d4ed8;
+			border-color: #1e40af;
+		}
+	</style>`);
+}
+
+function compute_recurrence_dates(doc) {
+	const type = doc.recurrence_type;
+	const freq = parseInt(doc.recurrence_frequency) || 1;
+	const until = doc.repeat_until ? new Date(doc.repeat_until) : null;
+
+	const start = new Date();
+	start.setHours(0, 0, 0, 0);
+	// Generate up to 90 days or until repeat_until, whichever comes first
+	const end = new Date(start);
+	end.setDate(end.getDate() + 90);
+	const cutoff = until && until < end ? until : end;
+
+	const results = [];
+
+	if (type === "Daily") {
+		let d = new Date(start);
+		while (d <= cutoff && results.length < 30) {
+			results.push(new Date(d));
+			d.setDate(d.getDate() + freq);
+		}
+	}
+
+	if (type === "Weekly") {
+		const DAY_MAP = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
+		const weekdays = (doc.recurrence_day || []).map((r) => DAY_MAP[r.weekday]).filter((n) => n !== undefined);
+		if (!weekdays.length) return [];
+
+		let d = new Date(start);
+		// Step through week-by-week, checking each configured day
+		while (d <= cutoff && results.length < 30) {
+			for (const day of weekdays.sort((a, b) => a - b)) {
+				const candidate = new Date(d);
+				const diff = (day - candidate.getDay() + 7) % 7;
+				candidate.setDate(candidate.getDate() + diff);
+				if (candidate >= start && candidate <= cutoff) {
+					results.push(new Date(candidate));
+				}
+			}
+			d.setDate(d.getDate() + freq * 7);
+		}
+		results.sort((a, b) => a - b);
+	}
+
+	if (type === "Monthly") {
+		if (doc.monthly_recurrence_based_on === "Date") {
+			const monthDates = (doc.recurrence_date || []).map((r) => parseInt(r.recurrence_date)).filter(Boolean);
+			if (!monthDates.length) return [];
+			let m = new Date(start.getFullYear(), start.getMonth(), 1);
+			while (m <= cutoff && results.length < 30) {
+				for (const day of monthDates) {
+					const candidate = new Date(m.getFullYear(), m.getMonth(), day);
+					if (candidate >= start && candidate <= cutoff) results.push(candidate);
+				}
+				m.setMonth(m.getMonth() + freq);
+			}
+		} else {
+			// Day-based monthly — too complex to compute here, skip calendar
+			return [];
+		}
+	}
+
+	if (type === "Yearly") {
+		const MONTH_MAP = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
+		const months = (doc.recurrence_month || []).map((r) => MONTH_MAP[r.month]).filter((n) => n !== undefined);
+		const monthDates = (doc.recurrence_date || []).map((r) => parseInt(r.recurrence_date)).filter(Boolean);
+		if (!months.length || !monthDates.length) return [];
+		let yr = start.getFullYear();
+		while (results.length < 10) {
+			for (const mo of months) {
+				for (const day of monthDates) {
+					const candidate = new Date(yr, mo, day);
+					if (candidate >= start) results.push(candidate);
+				}
+			}
+			yr += freq;
+			if (yr > start.getFullYear() + 5) break;
+		}
+	}
+
+	return results;
 }
 
 function get_target_end_datetime(duration, base_datetime) {
