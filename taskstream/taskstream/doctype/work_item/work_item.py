@@ -7,6 +7,7 @@ from functools import wraps
 
 import frappe
 from frappe.model.document import Document
+from frappe.model.naming import make_autoname
 from frappe.utils import get_datetime, now_datetime
 
 from taskstream.taskstream import send_notifications
@@ -20,7 +21,9 @@ def safe_exec(func):
 	def wrapper(*args, **kwargs):
 		try:
 			return func(*args, **kwargs)
-		except Exception:
+		except Exception as e:
+			if hasattr(frappe, "ValidationError") and isinstance(e, frappe.ValidationError):
+				raise
 			try:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{func.__name__} Error")
 			except Exception:
@@ -31,6 +34,13 @@ def safe_exec(func):
 
 
 class WorkItem(Document):
+	def autoname(self):
+		is_recurring_selected = self.recurrence_type not in ("One Time", "Recurring Instance")
+		if is_recurring_selected and not getattr(self, "reference_document", None):
+			self.name = make_autoname("WIM-.####", self.doctype)
+		else:
+			self.name = make_autoname("WI-.####", self.doctype)
+
 	@safe_exec
 	def validate(self):
 		if self.is_new():
@@ -190,9 +200,11 @@ class WorkItem(Document):
 
 		if len(creatable_values) > creation_limit:
 			creatable_values = creatable_values[:creation_limit]
-
-		for value in creatable_values:
-			create_work_item_recurrences(self, value[0], value[1])
+		if len(creatable_values) > 0:
+			for value in creatable_values:
+				create_work_item_recurrences(self, value[0], value[1])
+		else:
+			create_work_item_recurrences(self, values[0][0], values[0][1])
 
 		frappe.db.commit()
 

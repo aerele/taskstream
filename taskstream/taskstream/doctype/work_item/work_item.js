@@ -6,7 +6,6 @@ frappe.ui.form.on("Work Item", {
 		if (frm.is_new() && !frm.doc.reporter) {
 			frm.set_value("reporter", frappe.session.user);
 			frm.set_value("requester", frappe.session.user);
-			add_row_to_table(frm);
 		}
 		// update_recurrence_description(frm);
 		if (frm.is_new() && !frm.doc.target_end_date) {
@@ -14,7 +13,12 @@ frappe.ui.form.on("Work Item", {
 		}
 	},
 
+	onload_post_render(frm) {
+		reinit_datetime_pickers(frm);
+	},
+
 	refresh: function (frm) {
+		reinit_datetime_pickers(frm);
 		frm.page.sidebar.hide();
 		$(frm.page.wrapper).find(".sidebar-toggle-btn").hide();
 		setup_two_col_layout(frm);
@@ -185,6 +189,7 @@ frappe.ui.form.on("Work Item", {
 							fieldname: "req_target_date_time",
 							fieldtype: "Datetime",
 							reqd: 1,
+							default: frm.doc.target_end_date,
 						},
 						{
 							label: "Reason",
@@ -325,6 +330,7 @@ frappe.ui.form.on("Work Item", {
 			if (detailsTab) {
 				detailsTab.set_active();
 			}
+			add_row_to_table(frm);
 		} else {
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
 			const detailsTab = (frm.layout?.tabs || []).find(
@@ -353,11 +359,14 @@ frappe.ui.form.on("Work Item", {
 		if (frm.doc.work_flow) {
 			set_active_tab(frm, "work_flow_tab", "Work Flow");
 			frm.set_value("target_end_date", null);
+			frm.set_value("assignee", null);
 			frm.set_df_property("target_end_date", "read_only", 1);
+			frm.set_df_property("assignee", "read_only", 1);
 		} else {
 			set_active_tab(frm, "details_tab", "Details");
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
 			frm.set_df_property("target_end_date", "read_only", 0);
+			frm.set_df_property("assignee", "read_only", 0);
 			empty_fields(frm, [
 				"start_date_time",
 				"work_flow_template",
@@ -505,6 +514,9 @@ frappe.ui.form.on("Recurrence Date", {
 });
 
 frappe.ui.form.on("Recurrence Time", {
+	form_render(frm, cdt, cdn) {
+		reinit_child_time_pickers(frm);
+	},
 	recurrence_time: function (frm, cdt, cdn) {
 		validate_recurrence_time(frm, cdt, cdn);
 		update_recurrence_description(frm);
@@ -577,8 +589,19 @@ function update_recurrence_description(frm) {
 
 	const formatTimes = (times) => {
 		if (!times.length) return "";
-		const sorted = times.sort((a, b) => a - b).map((h) => `${h}:00`);
-		return " at " + sorted.join(", ") + " hrs";
+
+		const formatted = times
+			.map((t) => String(t || ""))
+			.map((s) => {
+				const parts = s.split(":");
+				const hour = String(parseInt(parts[0], 10) || 0).padStart(2, "0");
+				const minute = String(parseInt(parts[1], 10) || 0).padStart(2, "0");
+				return { hour, minute, total: parseInt(hour, 10) * 60 + parseInt(minute, 10) };
+			})
+			.sort((a, b) => a.total - b.total)
+			.map((o) => `${o.hour}:${o.minute}`);
+
+		return " at " + formatted.join(", ");
 	};
 
 	const formatDates = (date) => {
@@ -1203,4 +1226,54 @@ function add_row_to_table(frm) {
 			}
 		});
 	}
+}
+
+// ── 1. Override time format at runtime (session only, never persisted to DB) ──
+frappe.sys_defaults.time_format = "HH:mm";
+
+// ── 2. Force reinitialize pickers for the specific fields ─────────────────────
+const DATETIME_FIELDS = ["target_end_date", "start_date_time", "actual_end_date"];
+
+function reinit_datetime_pickers(frm) {
+	DATETIME_FIELDS.forEach((fieldname) => {
+		const ctrl = frm.fields_dict[fieldname];
+		if (!ctrl || !ctrl.$input) return;
+
+		const current_val = frm.doc[fieldname];
+
+		// Destroy existing picker and rebuild with updated time_format
+		if (ctrl.picker) {
+			ctrl.picker.destroy?.();
+			ctrl.picker = null;
+		}
+		ctrl.input_area?.replaceChildren?.();
+		ctrl.$input.remove?.();
+		ctrl.$input = null;
+
+		ctrl.make_input();
+
+		if (current_val) {
+			ctrl.set_input(current_val);
+		}
+	});
+}
+
+function reinit_child_time_pickers(frm) {
+	// Child table rows pick up frappe.sys_defaults.time_format on open,
+	// so existing open rows need their picker refreshed
+	const grid = frm.fields_dict?.recurrence_time_table?.grid;
+	if (!grid) return;
+
+	grid.grid_rows?.forEach((row) => {
+		const ctrl = row.open_form?.fields_dict?.recurrence_time;
+		if (!ctrl || !ctrl.$input) return;
+
+		const val = ctrl.value;
+		if (ctrl.timepicker_node) {
+			ctrl.timepicker_node.remove?.();
+			ctrl.timepicker_node = null;
+		}
+		ctrl.make_input();
+		if (val) ctrl.set_input(val);
+	});
 }
