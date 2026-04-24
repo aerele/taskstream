@@ -6,7 +6,6 @@ frappe.ui.form.on("Work Item", {
 		if (frm.is_new() && !frm.doc.reporter) {
 			frm.set_value("reporter", frappe.session.user);
 			frm.set_value("requester", frappe.session.user);
-			add_row_to_table(frm);
 		}
 		// update_recurrence_description(frm);
 		if (frm.is_new() && !frm.doc.target_end_date) {
@@ -330,6 +329,7 @@ frappe.ui.form.on("Work Item", {
 			if (detailsTab) {
 				detailsTab.set_active();
 			}
+			add_row_to_table(frm);
 		} else {
 			frm.set_value("target_end_date", `${frappe.datetime.get_today()} 23:59:59`);
 			const detailsTab = (frm.layout?.tabs || []).find(
