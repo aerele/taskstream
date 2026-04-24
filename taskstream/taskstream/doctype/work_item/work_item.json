@@ -48,7 +48,6 @@
   "recurrence_tab",
   "section_break_kqer",
   "recurrence_details_column",
-  "recurrence_description",
   "recurrence_type",
   "recurrence_frequency",
   "recurrence_day",
@@ -59,6 +58,8 @@
   "recurrence_time",
   "repeat_until",
   "column_break_iejr",
+  "recurrence_description",
+  "recurrence_calendar_html",
   "assigned_on",
   "score_tab",
   "section_break_yzzw",
@@ -178,7 +179,7 @@
   },
   {
    "default": "1",
-   "depends_on": "eval: !['One Time', 'Recurring Instance', 'Daily'].includes(doc.recurrence_type)",
+   "depends_on": "eval: !['One Time', 'Recurring Instance'].includes(doc.recurrence_type)",
    "fieldname": "recurrence_frequency",
    "fieldtype": "Int",
    "label": "Recurrence Frequency",
@@ -453,6 +454,11 @@
   {
    "fieldname": "html_aseg",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "recurrence_calendar_html",
+   "fieldtype": "HTML",
+   "label": "Recurrence Calendar"
   }
  ],
  "grid_page_length": 50,
