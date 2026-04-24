@@ -20,7 +20,9 @@ def safe_exec(func):
 	def wrapper(*args, **kwargs):
 		try:
 			return func(*args, **kwargs)
-		except Exception:
+		except Exception as e:
+			if hasattr(frappe, "ValidationError") and isinstance(e, frappe.ValidationError):
+				raise
 			try:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{func.__name__} Error")
 			except Exception:
