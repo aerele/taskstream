@@ -381,7 +381,13 @@ def check_date_validity(self, valid_dates):
 			for date, time in valid_dates:
 				if _as_datetime(date, time) < now:
 					continue
-				if date.weekday() <= skip_type:
+				while True:
+					if date.weekday() <= skip_type:
+						break
+					date -= timedelta(days=1)
+				if _as_datetime(date, time) < now:
+					continue
+				if (date, time) not in dates and date <= get_datetime(self.repeat_until).date():
 					dates.append((date, time))
 
 		return dates
