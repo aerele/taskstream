@@ -26,7 +26,8 @@ frappe.ui.form.on("Work Item", {
 		set_wft_tasks(frm, frm.doc.work_flow_template);
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
-		const allowed = !(type === "One Time" || type === "Recurring Instance");
+		const work_item_type = frm.doc.work_item_type || null;
+		const allowed = !(type === "One Time" || work_item_type === "Recurring Instance");
 		//hide benefit_of_work_done if form is new
 		if (frm.is_new()) {
 			frm.set_df_property("benefit_of_work_done", "hidden", 1);
@@ -67,7 +68,7 @@ frappe.ui.form.on("Work Item", {
 			!frm.doc.first_mail &&
 			!frm.is_dirty() &&
 			frm.doc.status === "Open" &&
-			["One Time", "Recurring Instance"].includes(frm.doc.recurrence_type) &&
+			["One Time"].includes(frm.doc.recurrence_type) &&
 			(user === frm.doc.reporter || user === frm.doc.requester)
 		) {
 			frm.add_custom_button(__("Sent Mail"), function () {
@@ -232,7 +233,7 @@ frappe.ui.form.on("Work Item", {
 			});
 		}
 		//Update Recurrence Type options
-		if (frm.doc.recurrence_type != "Recurring Instance") {
+		if (frm.doc.work_item_type != "Recurring Instance") {
 			const options = "Daily\nWeekly\nMonthly\nYearly";
 			frm.set_df_property("recurrence_type", "options", options);
 			frm.refresh_field("recurrence_type");
@@ -246,7 +247,9 @@ frappe.ui.form.on("Work Item", {
 		if (
 			frm.doc.status === "Open" &&
 			approved_users_for_reassignment.includes(user) &&
-			["One Time", "Recurring Instance"].includes(frm.doc.recurrence_type) &&
+			(frm.doc.recurrence_type === "One Time" ||
+				frm.doc.work_item_type === "Recurring Instance") &&
+			// ["One Time", "Recurring Instance"].includes(frm.doc.recurrence_type) &&
 			!frm.is_new()
 		) {
 			frm.add_custom_button(__("Reassign"), function () {
@@ -324,6 +327,7 @@ frappe.ui.form.on("Work Item", {
 		if (frm.doc.recurring_task === 1) {
 			frm.set_value("target_end_date", null);
 			frm.set_value("start_from", frappe.datetime.add_days(frappe.datetime.get_today(), 1));
+			frm.set_value("work_item_type", "Recurrence Master");
 			frm.set_df_property("target_end_date", "read_only", 1);
 			const detailsTab = (frm.layout?.tabs || []).find(
 				(t) => t.df && (t.df.fieldname === "recurrence_tab" || t.label === "Recurrence")
@@ -352,6 +356,7 @@ frappe.ui.form.on("Work Item", {
 				"recurrence_day_occurrence",
 				"recurrence_time",
 				"start_from",
+				"work_item_type",
 			]);
 			frm.set_value("recurrence_type", "One Time");
 		}

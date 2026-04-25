@@ -35,7 +35,9 @@ def safe_exec(func):
 
 class WorkItem(Document):
 	def autoname(self):
-		is_recurring_selected = self.recurrence_type not in ("One Time", "Recurring Instance")
+		is_recurring_selected = (
+			self.work_item_type == "Recurrence Master"
+		)  # self.recurrence_type not in ("One Time", "Recurring Instance")
 		if is_recurring_selected and not getattr(self, "reference_document", None):
 			self.name = make_autoname("WIM-.####", self.doctype)
 		else:
@@ -44,13 +46,13 @@ class WorkItem(Document):
 	@safe_exec
 	def validate(self):
 		if self.is_new():
-			if self.recurrence_type == "One Time" or self.recurrence_type == "Recurring Instance":
+			if self.recurrence_type == "One Time" or self.work_item_type == "Recurring Instance":
 				is_end_date_not_in_past(self.target_end_date)
 			else:
 				is_end_date_not_in_past(self.repeat_until)
 		if not self.assigned_on:
 			self.assigned_on = now_datetime().date()
-		if self.recurrence_type in ["One Time", "Recurring Instance"]:
+		if self.recurrence_type in ["One Time"] or self.work_item_type in ["Recurring Instance"]:
 			planned_end_exists = (
 				self.target_end_date
 			)  # any(row.action_type == "Target End Date" for row in self.activities)
@@ -58,11 +60,11 @@ class WorkItem(Document):
 				frappe.throw("Activities must include one 'Target End Date' entry.")
 
 			self.validate_reviewer()
-			self.validate_recurrence_date()
+			if self.recurrence_type == "Monthly" and self.monthly_recurrence_based_on == "Date":
+				self.validate_recurrence_date()
 			if (
-				self.recurrence_type not in ["One Time", "Recurring Instance"]
-				and self.monthly_recurrence_based_on == "Date"
-			):
+				self.recurrence_type != "One Time" or self.work_item_type != "Recurring Instance"
+			) and self.monthly_recurrence_based_on == "Date":
 				self.validate_recurrence_time()
 
 		if self.status == "Open":
@@ -75,7 +77,7 @@ class WorkItem(Document):
 			if self.status == "Done":
 				create_sub_task(self, self.idx)
 
-		if self.recurrence_type == "Recurring Instance" and self.status == "Done":
+		if self.work_item_type == "Recurring Instance" and self.status == "Done":
 			self.create_work_item_recurrences()
 
 	@safe_exec
@@ -175,7 +177,7 @@ class WorkItem(Document):
 
 	@safe_exec
 	def after_insert(self):
-		if self.recurrence_type in ["One Time", "Recurring Instance"]:
+		if self.recurrence_type in ["One Time"] or self.work_item_type == "Recurring Instance":
 			return
 		creation_limit = frappe.get_single_value("Work Item Configuration", "recurrence_creation_limit")
 
@@ -434,10 +436,9 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	new_wi.revision_count = 0
 	new_wi.recurrence_frequency = 0
 	new_wi.benefit_of_work_done = 100
-	new_wi.recurrence_type = "Recurring Instance"
-	new_wi.recurrence_date = []
-	new_wi.recurrence_time = []
-	new_wi.activities = []
+	new_wi.work_item_type = "Recurring Instance"
+	# new_wi.recurrence_date = []
+	# new_wi.recurrence_time = []
 
 	if isinstance(recurrence_time, timedelta):
 		time_delta = recurrence_time
@@ -463,7 +464,7 @@ def create_work_item_recurrences(wi_doc, date, recurrence_time):
 	new_wi.status = "Open"
 	new_wi.reference_doctype = "Work Item"
 	new_wi.reference_document = (
-		wi_doc.reference_document if wi_doc.recurrence_type == "Recurring Instance" else wi_doc.name
+		wi_doc.reference_document if wi_doc.work_item_type == "Recurring Instance" else wi_doc.name
 	)
 	new_wi.owner = wi_doc.owner
 	new_wi.save(ignore_permissions=True)
