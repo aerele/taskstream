@@ -18,6 +18,7 @@ frappe.ui.form.on("Work Item", {
 	},
 
 	refresh: function (frm) {
+		custom_pill_type(frm);
 		reinit_datetime_pickers(frm);
 		frm.page.sidebar.hide();
 		$(frm.page.wrapper).find(".sidebar-toggle-btn").hide();
@@ -1283,4 +1284,15 @@ function reinit_child_time_pickers(frm) {
 		ctrl.make_input();
 		if (val) ctrl.set_input(val);
 	});
+}
+
+function custom_pill_type(frm) {
+	$(".custom-work-item-pill").remove();
+	if (frm.doc.work_item_type) {
+		$(frm.page.indicator).after(`
+			<span class="indicator-pill blue custom-work-item-pill" style="margin-left: 8px;">
+				${frm.doc.work_item_type}
+			</span>
+		`);
+	}
 }
