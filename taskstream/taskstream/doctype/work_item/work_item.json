@@ -50,6 +50,7 @@
   "recurrence_details_column",
   "recurrence_description",
   "recurrence_type",
+  "work_item_type",
   "recurrence_frequency",
   "recurrence_day",
   "monthly_recurrence_based_on",
@@ -57,6 +58,7 @@
   "recurrence_date",
   "recurrence_day_occurrence",
   "recurrence_time",
+  "start_from",
   "repeat_until",
   "column_break_iejr",
   "assigned_on",
@@ -135,11 +137,11 @@
    "options": "Month Option"
   },
   {
-   "depends_on": "eval: doc.recurrence_type != 'One Time' && doc.recurrence_type != 'Recurring Instance'",
+   "depends_on": "eval: doc.recurrence_type != 'One Time' && doc.work_item_type != 'Recurring Instance'",
    "fieldname": "recurrence_time",
    "fieldtype": "Table",
    "label": "Recurrence Time",
-   "mandatory_depends_on": "eval: doc.recurrence_type != 'One Time' && doc.recurrence_type != 'Recurring Instance'",
+   "mandatory_depends_on": "eval: doc.recurrence_type != 'One Time' && doc.work_item_type != 'Recurring Instance'",
    "options": "Recurrence Time"
   },
   {
@@ -178,7 +180,7 @@
   },
   {
    "default": "1",
-   "depends_on": "eval: !['One Time', 'Recurring Instance', 'Daily'].includes(doc.recurrence_type)",
+   "depends_on": "eval: doc.recurrence_type != \"One Time\" || doc.work_item_type != \"Recurring Instance\"",
    "fieldname": "recurrence_frequency",
    "fieldtype": "Int",
    "label": "Recurrence Frequency",
@@ -365,11 +367,11 @@
    "label": "Benefit of Work Done (%)"
   },
   {
-   "depends_on": "eval: doc.recurring_task === 0 || doc.recurrence_type == \"One Time\" || doc.recurrence_type == \"Recurring Instance\"",
+   "depends_on": "eval: doc.recurring_task === 0 || doc.recurrence_type == \"One Time\" || doc.work_item_type == \"Recurring Instance\"",
    "fieldname": "target_end_date",
    "fieldtype": "Datetime",
    "label": "Target End Date",
-   "mandatory_depends_on": "eval: doc.recurrence_type == \"One Time\" || doc.recurrence_type == \"Recurring Instance\""
+   "mandatory_depends_on": "eval: doc.recurrence_type == \"One Time\" || doc.work_item_type == \"Recurring Instance\""
   },
   {
    "fieldname": "actual_end_date",
@@ -453,12 +455,24 @@
   {
    "fieldname": "html_aseg",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "start_from",
+   "fieldtype": "Date",
+   "label": "Start From"
+  },
+  {
+   "fieldname": "work_item_type",
+   "fieldtype": "Select",
+   "label": "Work Item Type",
+   "options": "\nRecurrence Master\nRecurring Instance",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 16:54:24.873055",
+ "modified": "2026-04-25 19:16:24.070292",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
