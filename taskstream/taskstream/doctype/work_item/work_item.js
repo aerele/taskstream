@@ -323,6 +323,7 @@ frappe.ui.form.on("Work Item", {
 	recurring_task: function (frm) {
 		if (frm.doc.recurring_task === 1) {
 			frm.set_value("target_end_date", null);
+			frm.set_value("start_from", frappe.datetime.add_days(frappe.datetime.get_today(), 1));
 			frm.set_df_property("target_end_date", "read_only", 1);
 			const detailsTab = (frm.layout?.tabs || []).find(
 				(t) => t.df && (t.df.fieldname === "recurrence_tab" || t.label === "Recurrence")
@@ -350,6 +351,7 @@ frappe.ui.form.on("Work Item", {
 				"recurrence_date",
 				"recurrence_day_occurrence",
 				"recurrence_time",
+				"start_from",
 			]);
 			frm.set_value("recurrence_type", "One Time");
 		}

@@ -57,6 +57,7 @@
   "recurrence_date",
   "recurrence_day_occurrence",
   "recurrence_time",
+  "start_from",
   "repeat_until",
   "column_break_iejr",
   "assigned_on",
@@ -453,12 +454,17 @@
   {
    "fieldname": "html_aseg",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "start_from",
+   "fieldtype": "Date",
+   "label": "Start From"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-22 16:54:24.873055",
+ "modified": "2026-04-25 17:38:18.948808",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
