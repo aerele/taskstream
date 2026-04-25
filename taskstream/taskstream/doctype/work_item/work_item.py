@@ -8,7 +8,7 @@ from functools import wraps
 import frappe
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import get_datetime, now_datetime
+from frappe.utils import get_datetime, getdate, now_datetime
 
 from taskstream.taskstream import send_notifications
 from taskstream.taskstream.doctype.work_item_score_summary.work_item_score_summary import (
@@ -179,7 +179,7 @@ class WorkItem(Document):
 			return
 		creation_limit = frappe.get_single_value("Work Item Configuration", "recurrence_creation_limit")
 
-		start_date = now_datetime().date()
+		start_date = getdate(self.start_from)
 		end_date = datetime.strptime(self.repeat_until, "%Y-%m-%d").date()
 		max_creation_date = start_date + timedelta(days=creation_limit)
 		values = _get_valid_dates(self, start_date, end_date)
