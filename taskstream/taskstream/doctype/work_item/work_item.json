@@ -464,6 +464,7 @@
   {
    "fieldname": "work_item_type",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Work Item Type",
    "options": "\nRecurrence Master\nRecurring Instance",
    "read_only": 1
@@ -472,7 +473,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-25 19:16:24.070292",
+ "modified": "2026-04-27 11:21:11.713952",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
