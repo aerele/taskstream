@@ -555,6 +555,25 @@ frappe.ui.form.on("Recurrence Day Occurrence", {
 	},
 });
 
+frappe.ui.form.on("Work Item Attachment", {
+	before_attachments_remove: function (frm, cdt, cdn) {
+		const { user } = frappe.session;
+		const row = locals[cdt][cdn];
+
+		if (user === frm.doc.reporter || user === frm.doc.requester) {
+			return;
+		}
+
+		if (row && row.owner === user) {
+			return;
+		}
+
+		frappe.throw(
+			__("Only the reporter/requester or the attachment owner can delete this attachment")
+		);
+	},
+});
+
 function validate_recurrence_time(frm, cdt, cdn) {
 	let row = locals[cdt][cdn];
 	let val = row.recurrence_time;
