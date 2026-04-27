@@ -225,11 +225,13 @@ frappe.ui.form.on("Work Item", {
 		if (
 			frm.doc.status === "Done" ||
 			(!frm.is_new() &&
-				(frm.doc.first_mail == 1 ||
-					(user !== frm.doc.reporter && user !== frm.doc.requester)))
+				// (frm.doc.first_mail == 1 ||
+				user !== frm.doc.reporter &&
+				user !== frm.doc.requester) //)
 		) {
 			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
 			fieldnames.forEach((field) => {
+				if (field === "attachments") return;
 				frm.set_df_property(field, "read_only", 1);
 			});
 		}
