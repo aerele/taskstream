@@ -235,10 +235,13 @@ def _get_valid_dates(self, start_date, end_date):
 	valid_dates = []
 
 	if self.recurrence_type == "Daily":
+		frequency = int(self.recurrence_frequency or 1)
 		current_date = start_date
 		while current_date <= end_date:
-			for time_delta in parsed_times:
-				valid_dates.append((current_date, time_delta))
+			days_diff = (current_date - start_date).days
+			if days_diff % frequency == 0:
+				for time_delta in parsed_times:
+					valid_dates.append((current_date, time_delta))
 			current_date += timedelta(days=1)
 
 	elif self.recurrence_type == "Weekly":
