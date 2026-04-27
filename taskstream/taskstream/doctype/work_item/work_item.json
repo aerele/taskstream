@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "WI-.####",
  "creation": "2025-06-26 17:45:14.163828",
@@ -464,6 +465,7 @@
   {
    "fieldname": "work_item_type",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Work Item Type",
    "options": "\nRecurrence Master\nRecurring Instance",
    "read_only": 1
@@ -472,7 +474,8 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-25 19:16:24.070292",
+ "make_attachments_public": 1,
+ "modified": "2026-04-27 15:35:20.842425",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
