@@ -163,7 +163,24 @@ class WorkItem(Document):
 
 		key_field_changed = any(
 			self.has_value_changed(field)
-			for field in ["reviewer", "reporter", "summary", "description", "assignee", "review_required"]
+			for field in [
+				"reviewer",
+				"reporter",
+				"summary",
+				"description",
+				"assignee",
+				"review_required",
+				"start_from",
+				"recurrence_type",
+				"recurrence_frequency",
+				"recurrence_day",
+				"monthly_recurrence_based_on",
+				"recurrence_month",
+				"recurrence_date",
+				"recurrence_day_occurrence",
+				"recurrence_time",
+				"repeat_until",
+			]
 		)
 
 		if not (key_field_changed):
@@ -174,6 +191,9 @@ class WorkItem(Document):
 
 		if self.first_mail:
 			sent_noti(self.name)
+
+		_purge_work_item(self.name)
+		self.after_insert()
 
 	@safe_exec
 	def after_insert(self):
@@ -847,7 +867,6 @@ def _get_work_item(docname, change_date=None):
 
 	if not change_date:
 		work_item = frappe.db.sql(query, tuple(params))
-		work_item = work_item[1:]
 		return work_item
 	else:
 		return frappe.db.sql(query, tuple(params))

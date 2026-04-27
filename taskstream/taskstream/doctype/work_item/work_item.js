@@ -34,11 +34,11 @@ frappe.ui.form.on("Work Item", {
 			frm.set_df_property("benefit_of_work_done", "hidden", 1);
 		}
 		//Update Master Recurring Work Item
-		if (allowed && (user === frm.doc.reporter || user === frm.doc.requester)) {
-			frm.add_custom_button(__("Update Recurrence Item"), function () {
-				UpdateWorkItemDetails(frm);
-			});
-		}
+		// if (allowed && (user === frm.doc.reporter || user === frm.doc.requester)) {
+		// 	frm.add_custom_button(__("Update Recurrence Item"), function () {
+		// 		UpdateWorkItemDetails(frm);
+		// 	});
+		// }
 		// Mark Complete button
 		if (
 			(frm.doc.status === "Open" && !frm.doc.review_required && user === frm.doc.assignee) ||
@@ -230,6 +230,29 @@ frappe.ui.form.on("Work Item", {
 				user !== frm.doc.requester) //)
 		) {
 			const fieldnames = frm.meta.fields.map((f) => f.fieldname).filter(Boolean);
+			fieldnames.forEach((field) => {
+				if (field === "attachments") return;
+				frm.set_df_property(field, "read_only", 1);
+			});
+		}
+		if (
+			frm.doc.work_item_type === "Recurring Instance" &&
+			(frm.doc.reporter === user || frm.doc.requester === user)
+		) {
+			const fieldnames = [
+				"start_from",
+				"recurrence_type",
+				"recurrence_frequency",
+				"recurrence_day",
+				"monthly_recurrence_based_on",
+				"recurrence_month",
+				"recurrence_date",
+				"recurrence_day_occurrence",
+				"recurrence_time",
+				"repeat_until",
+				"recurring_task",
+				"work_flow",
+			];
 			fieldnames.forEach((field) => {
 				if (field === "attachments") return;
 				frm.set_df_property(field, "read_only", 1);
@@ -786,217 +809,217 @@ function set_target_end_date_time(frm) {
 	});
 }
 
-function UpdateWorkItemDetails(frm) {
-	let recurrence_time_data = (frm.doc.recurrence_time || []).map((row) => {
-		return {
-			recurrence_time: row.recurrence_time,
-		};
-	});
-	let recurrence_date_data = (frm.doc.recurrence_date || []).map((row) => {
-		return {
-			recurrence_date: row.recurrence_date,
-		};
-	});
-	let recurrence_day_data = (frm.doc.recurrence_day_occurrence || []).map((row) => {
-		return {
-			week_order: row.week_order,
-			weekday: row.weekday,
-		};
-	});
+// function UpdateWorkItemDetails(frm) {
+// 	let recurrence_time_data = (frm.doc.recurrence_time || []).map((row) => {
+// 		return {
+// 			recurrence_time: row.recurrence_time,
+// 		};
+// 	});
+// 	let recurrence_date_data = (frm.doc.recurrence_date || []).map((row) => {
+// 		return {
+// 			recurrence_date: row.recurrence_date,
+// 		};
+// 	});
+// 	let recurrence_day_data = (frm.doc.recurrence_day_occurrence || []).map((row) => {
+// 		return {
+// 			week_order: row.week_order,
+// 			weekday: row.weekday,
+// 		};
+// 	});
 
-	let d = new frappe.ui.Dialog({
-		title: "Update Work Item",
-		size: "extra-large",
-		fields: [
-			{
-				fieldname: "one_time_change",
-				fieldtype: "Check",
-				label: "One Time Change",
-			},
-			{
-				depends_on: "eval: doc.one_time_change",
-				fieldname: "update_on_date",
-				fieldtype: "Date",
-				label: "Update On Date",
-				mandatory_depends_on: "eval: doc.one_time_change",
-			},
-			{
-				label: "Requester",
-				fieldname: "requester",
-				fieldtype: "Link",
-				options: "User",
-				default: frm.doc.requester,
-			},
-			{
-				label: "Summary",
-				fieldname: "summary",
-				fieldtype: "Small Text",
-				default: frm.doc.summary,
-			},
-			{
-				label: "Description",
-				fieldname: "description",
-				fieldtype: "Text Editor",
-				default: frm.doc.description,
-			},
-			{
-				label: "Review Required",
-				fieldname: "review_required",
-				fieldtype: "Check",
-				default: frm.doc.review_required,
-			},
-			{
-				label: "Reviewer",
-				fieldname: "reviewer",
-				fieldtype: "Link",
-				options: "User",
-				depends_on: "eval:doc.review_required == 1",
-				default: frm.doc.reviewer,
-			},
-			{
-				label: "Recurrence Type",
-				fieldname: "recurrence_type",
-				fieldtype: "Select",
-				options: "Daily\nWeekly\nMonthly\nYearly",
-				default: frm.doc.recurrence_type,
-				depends_on: "eval: doc.one_time_change == 0",
-			},
-			{
-				fieldname: "repeat_until",
-				fieldtype: "Date",
-				label: "Repeat Until",
-				default: frm.doc.repeat_until,
-				depends_on: "eval: doc.one_time_change == 0",
-			},
-			{
-				depends_on:
-					"eval: !['One Time', 'Daily'].includes(doc.recurrence_type) && doc.one_time_change == 0",
-				fieldname: "recurrence_frequency",
-				fieldtype: "Int",
-				label: "Recurrence Frequency",
-				non_negative: 1,
-				default: frm.doc.recurrence_frequency,
-			},
-			{
-				depends_on: "eval: doc.recurrence_type == 'Weekly' && doc.one_time_change == 0",
-				fieldname: "recurrence_day",
-				fieldtype: "Table MultiSelect",
-				label: "Recurrence Day",
-				options: "Weekday Option",
-				default: frm.doc.recurrence_day,
-			},
-			{
-				depends_on: "eval: doc.recurrence_type == 'Monthly' && doc.one_time_change == 0",
-				fieldname: "monthly_recurrence_based_on",
-				fieldtype: "Select",
-				label: "Monthly Recurrence Based On",
-				options: "Date\nDay",
-				default: frm.doc.monthly_recurrence_based_on,
-			},
-			{
-				depends_on:
-					'eval: ["Monthly", "Yearly"].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on === "Date" && doc.one_time_change == 0',
-				fieldname: "recurrence_date",
-				fieldtype: "Table",
-				label: "Recurrence Date",
-				mandatory_depends_on:
-					"eval:['Monthly', 'Yearly'].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on == \"Date\"",
-				in_place_edit: true,
-				data: recurrence_date_data,
-				fields: [
-					{
-						label: "Recurrence Date",
-						fieldname: "recurrence_date",
-						fieldtype: "Int",
-						in_list_view: true,
-					},
-				],
-			},
-			{
-				depends_on:
-					"eval: doc.recurrence_type == 'Monthly' && doc.monthly_recurrence_based_on == 'Day' && doc.one_time_change == 0",
-				fieldname: "recurrence_day_occurrence",
-				fieldtype: "Table",
-				label: "Recurrence Day Occurrence",
-				mandatory_depends_on:
-					"eval:['Monthly'].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on == \"Day\"",
-				in_place_edit: true,
-				data: recurrence_day_data,
-				fields: [
-					{
-						label: "Week Order",
-						fieldname: "week_order",
-						fieldtype: "Select",
-						options: "First\nSecond\nThird\nFourth\nLast",
-						in_list_view: true,
-					},
-					{
-						label: "Weekday",
-						fieldname: "weekday",
-						fieldtype: "Select",
-						options: "Sunday\nMonday\nTuesday\nWednesday\nThursday\nFriday\nSaturday",
-						in_list_view: true,
-					},
-				],
-			},
-			{
-				depends_on: "eval: doc.recurrence_type == 'Yearly' && doc.one_time_change == 0",
-				fieldname: "recurrence_month",
-				fieldtype: "Table MultiSelect",
-				label: "Recurrence Month",
-				options: "Month Option",
-			},
-			{
-				depends_on: "eval: doc.one_time_change == 0",
-				fieldname: "recurrence_time",
-				fieldtype: "Table",
-				label: "Recurrence Time",
-				reqd: 1,
-				in_place_edit: true,
-				data: recurrence_time_data,
-				fields: [
-					{
-						label: "Recurrence Time (Hour of the day (in IST)",
-						fieldname: "recurrence_time",
-						fieldtype: "Select",
-						options:
-							"00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23",
-						in_list_view: true,
-					},
-				],
-			},
-		],
-		primary_action_label: "Submit",
-		primary_action(values) {
-			frappe.confirm(
-				__(
-					"Proceeding will replace the existing documents with a new work item that includes the updates. Are you sure?"
-				),
-				function () {
-					frappe.call({
-						method: "taskstream.taskstream.doctype.work_item.work_item.apply_updates_to_work_item",
-						args: {
-							docname: frm.doc.name,
-							updates: JSON.stringify(values),
-							one_time: values.one_time_change ? 1 : 0,
-							change_date: values.update_on_date || null,
-						},
-						callback: function (r) {
-							if (!r.exc) {
-								frappe.msgprint(
-									r.message?.message || r.message || __("Update applied")
-								);
-								d.hide();
-								frm.reload_doc();
-							}
-						},
-					});
-				}
-			);
-		},
-	});
-	d.show();
-}
+// 	let d = new frappe.ui.Dialog({
+// 		title: "Update Work Item",
+// 		size: "extra-large",
+// 		fields: [
+// 			{
+// 				fieldname: "one_time_change",
+// 				fieldtype: "Check",
+// 				label: "One Time Change",
+// 			},
+// 			{
+// 				depends_on: "eval: doc.one_time_change",
+// 				fieldname: "update_on_date",
+// 				fieldtype: "Date",
+// 				label: "Update On Date",
+// 				mandatory_depends_on: "eval: doc.one_time_change",
+// 			},
+// 			{
+// 				label: "Requester",
+// 				fieldname: "requester",
+// 				fieldtype: "Link",
+// 				options: "User",
+// 				default: frm.doc.requester,
+// 			},
+// 			{
+// 				label: "Summary",
+// 				fieldname: "summary",
+// 				fieldtype: "Small Text",
+// 				default: frm.doc.summary,
+// 			},
+// 			{
+// 				label: "Description",
+// 				fieldname: "description",
+// 				fieldtype: "Text Editor",
+// 				default: frm.doc.description,
+// 			},
+// 			{
+// 				label: "Review Required",
+// 				fieldname: "review_required",
+// 				fieldtype: "Check",
+// 				default: frm.doc.review_required,
+// 			},
+// 			{
+// 				label: "Reviewer",
+// 				fieldname: "reviewer",
+// 				fieldtype: "Link",
+// 				options: "User",
+// 				depends_on: "eval:doc.review_required == 1",
+// 				default: frm.doc.reviewer,
+// 			},
+// 			{
+// 				label: "Recurrence Type",
+// 				fieldname: "recurrence_type",
+// 				fieldtype: "Select",
+// 				options: "Daily\nWeekly\nMonthly\nYearly",
+// 				default: frm.doc.recurrence_type,
+// 				depends_on: "eval: doc.one_time_change == 0",
+// 			},
+// 			{
+// 				fieldname: "repeat_until",
+// 				fieldtype: "Date",
+// 				label: "Repeat Until",
+// 				default: frm.doc.repeat_until,
+// 				depends_on: "eval: doc.one_time_change == 0",
+// 			},
+// 			{
+// 				depends_on:
+// 					"eval: !['One Time', 'Daily'].includes(doc.recurrence_type) && doc.one_time_change == 0",
+// 				fieldname: "recurrence_frequency",
+// 				fieldtype: "Int",
+// 				label: "Recurrence Frequency",
+// 				non_negative: 1,
+// 				default: frm.doc.recurrence_frequency,
+// 			},
+// 			{
+// 				depends_on: "eval: doc.recurrence_type == 'Weekly' && doc.one_time_change == 0",
+// 				fieldname: "recurrence_day",
+// 				fieldtype: "Table MultiSelect",
+// 				label: "Recurrence Day",
+// 				options: "Weekday Option",
+// 				default: frm.doc.recurrence_day,
+// 			},
+// 			{
+// 				depends_on: "eval: doc.recurrence_type == 'Monthly' && doc.one_time_change == 0",
+// 				fieldname: "monthly_recurrence_based_on",
+// 				fieldtype: "Select",
+// 				label: "Monthly Recurrence Based On",
+// 				options: "Date\nDay",
+// 				default: frm.doc.monthly_recurrence_based_on,
+// 			},
+// 			{
+// 				depends_on:
+// 					'eval: ["Monthly", "Yearly"].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on === "Date" && doc.one_time_change == 0',
+// 				fieldname: "recurrence_date",
+// 				fieldtype: "Table",
+// 				label: "Recurrence Date",
+// 				mandatory_depends_on:
+// 					"eval:['Monthly', 'Yearly'].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on == \"Date\"",
+// 				in_place_edit: true,
+// 				data: recurrence_date_data,
+// 				fields: [
+// 					{
+// 						label: "Recurrence Date",
+// 						fieldname: "recurrence_date",
+// 						fieldtype: "Int",
+// 						in_list_view: true,
+// 					},
+// 				],
+// 			},
+// 			{
+// 				depends_on:
+// 					"eval: doc.recurrence_type == 'Monthly' && doc.monthly_recurrence_based_on == 'Day' && doc.one_time_change == 0",
+// 				fieldname: "recurrence_day_occurrence",
+// 				fieldtype: "Table",
+// 				label: "Recurrence Day Occurrence",
+// 				mandatory_depends_on:
+// 					"eval:['Monthly'].includes(doc.recurrence_type) && doc.monthly_recurrence_based_on == \"Day\"",
+// 				in_place_edit: true,
+// 				data: recurrence_day_data,
+// 				fields: [
+// 					{
+// 						label: "Week Order",
+// 						fieldname: "week_order",
+// 						fieldtype: "Select",
+// 						options: "First\nSecond\nThird\nFourth\nLast",
+// 						in_list_view: true,
+// 					},
+// 					{
+// 						label: "Weekday",
+// 						fieldname: "weekday",
+// 						fieldtype: "Select",
+// 						options: "Sunday\nMonday\nTuesday\nWednesday\nThursday\nFriday\nSaturday",
+// 						in_list_view: true,
+// 					},
+// 				],
+// 			},
+// 			{
+// 				depends_on: "eval: doc.recurrence_type == 'Yearly' && doc.one_time_change == 0",
+// 				fieldname: "recurrence_month",
+// 				fieldtype: "Table MultiSelect",
+// 				label: "Recurrence Month",
+// 				options: "Month Option",
+// 			},
+// 			{
+// 				depends_on: "eval: doc.one_time_change == 0",
+// 				fieldname: "recurrence_time",
+// 				fieldtype: "Table",
+// 				label: "Recurrence Time",
+// 				reqd: 1,
+// 				in_place_edit: true,
+// 				data: recurrence_time_data,
+// 				fields: [
+// 					{
+// 						label: "Recurrence Time (Hour of the day (in IST)",
+// 						fieldname: "recurrence_time",
+// 						fieldtype: "Select",
+// 						options:
+// 							"00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23",
+// 						in_list_view: true,
+// 					},
+// 				],
+// 			},
+// 		],
+// 		primary_action_label: "Submit",
+// 		primary_action(values) {
+// 			frappe.confirm(
+// 				__(
+// 					"Proceeding will replace the existing documents with a new work item that includes the updates. Are you sure?"
+// 				),
+// 				function () {
+// 					frappe.call({
+// 						method: "taskstream.taskstream.doctype.work_item.work_item.apply_updates_to_work_item",
+// 						args: {
+// 							docname: frm.doc.name,
+// 							updates: JSON.stringify(values),
+// 							one_time: values.one_time_change ? 1 : 0,
+// 							change_date: values.update_on_date || null,
+// 						},
+// 						callback: function (r) {
+// 							if (!r.exc) {
+// 								frappe.msgprint(
+// 									r.message?.message || r.message || __("Update applied")
+// 								);
+// 								d.hide();
+// 								frm.reload_doc();
+// 							}
+// 						},
+// 					});
+// 				}
+// 			);
+// 		},
+// 	});
+// 	d.show();
+// }
 
 function setup_work_flow_template(frm) {
 	if (frm.doc.work_flow_template) {
