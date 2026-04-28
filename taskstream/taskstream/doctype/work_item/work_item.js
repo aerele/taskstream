@@ -660,8 +660,29 @@ function update_recurrence_description(frm) {
 		? ` until ${moment(frm.doc.repeat_until).format("MMM D, YYYY")}`
 		: "";
 
-	const DAY_ORDER = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
-	const MONTH_ORDER = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+	const DAY_ORDER = {
+		Sunday: 0,
+		Monday: 1,
+		Tuesday: 2,
+		Wednesday: 3,
+		Thursday: 4,
+		Friday: 5,
+		Saturday: 6,
+	};
+	const MONTH_ORDER = [
+		"January",
+		"February",
+		"March",
+		"April",
+		"May",
+		"June",
+		"July",
+		"August",
+		"September",
+		"October",
+		"November",
+		"December",
+	];
 
 	const sorted_days = (frm.doc.recurrence_day || [])
 		.map((r) => r.weekday)
@@ -733,16 +754,9 @@ function update_recurrence_description(frm) {
 
 function render_recurrence_calendar(frm) {
 	const type = frm.doc.recurrence_type;
+	const isRecurringInstance = frm.doc.work_item_type === "Recurring Instance";
 
-	// Clear and exit for non-recurring types
-	if (!type || type === "One Time") {
-		frm.set_df_property("recurrence_calendar_html", "options", "");
-		frm.refresh_field("recurrence_calendar_html");
-		return;
-	}
-
-	// Recurring Instance: fetch master config, highlight this instance's target date
-	if (type === "Recurring Instance") {
+	if (isRecurringInstance) {
 		const masterName = frm.doc.reference_document;
 		if (!masterName || frm.doc.reference_doctype !== "Work Item") {
 			frm.set_df_property("recurrence_calendar_html", "options", "");
@@ -755,16 +769,38 @@ function render_recurrence_calendar(frm) {
 		return;
 	}
 
+	// Clear and exit for non-recurring types
+	if (!type || type === "One Time") {
+		frm.set_df_property("recurrence_calendar_html", "options", "");
+		frm.refresh_field("recurrence_calendar_html");
+		return;
+	}
+
 	_render_cal_from_doc(frm, frm.doc, null);
 }
 
+function wi_cal_date_key(value) {
+	if (!value) return null;
+	if (typeof value === "string") {
+		const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+		if (match) return match[1];
+	}
+
+	const parsed = value instanceof Date ? value : new Date(value);
+	if (Number.isNaN(parsed.getTime())) return null;
+
+	return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(
+		parsed.getDate()
+	).padStart(2, "0")}`;
+}
+
 function _render_cal_from_doc(frm, doc, instanceDatetime) {
-	const toLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	const toLocalDate = (d) => wi_cal_date_key(d);
 	const dates = compute_recurrence_dates(doc);
 	const dateSet = new Set(dates.map(toLocalDate));
 
 	// YYYY-MM-DD of this instance's target_end_date (null for master/normal view)
-	const instanceDate = instanceDatetime ? toLocalDate(new Date(instanceDatetime)) : null;
+	const instanceDate = wi_cal_date_key(instanceDatetime);
 
 	// Build month list from computed dates; fall back to current month
 	const months = [];
@@ -804,7 +840,12 @@ function _render_cal_from_doc(frm, doc, instanceDatetime) {
 			const next = frm._wi_cal.index + dir;
 			if (next < 0 || next >= frm._wi_cal.months.length) return;
 			frm._wi_cal.index = next;
-			const html = wi_cal_build_html(frm._wi_cal.months, frm._wi_cal.dateSet, frm._wi_cal.index, frm._wi_cal.instanceDate);
+			const html = wi_cal_build_html(
+				frm._wi_cal.months,
+				frm._wi_cal.dateSet,
+				frm._wi_cal.index,
+				frm._wi_cal.instanceDate
+			);
 			frm.set_df_property("recurrence_calendar_html", "options", html);
 			frm.refresh_field("recurrence_calendar_html");
 		});
@@ -822,13 +863,29 @@ function _render_cal_from_doc(frm, doc, instanceDatetime) {
 }
 
 function wi_cal_build_html(months, dateSet, index, instanceDate) {
-	const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-	const DAY_LABELS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+	const MONTH_NAMES = [
+		"January",
+		"February",
+		"March",
+		"April",
+		"May",
+		"June",
+		"July",
+		"August",
+		"September",
+		"October",
+		"November",
+		"December",
+	];
+	const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 	const { year, month } = months[index];
 	const firstDay = new Date(year, month, 1).getDay();
 	const daysInMonth = new Date(year, month + 1, 0).getDate();
-	const toLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	const toLocalDate = (d) =>
+		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+			d.getDate()
+		).padStart(2, "0")}`;
 	const today = toLocalDate(new Date());
 	const hasPrev = index > 0;
 	const hasNext = index < months.length - 1;
@@ -841,22 +898,42 @@ function wi_cal_build_html(months, dateSet, index, instanceDate) {
 		grid += `<div class="wi-cal-cell"></div>`;
 	}
 	for (let day = 1; day <= daysInMonth; day++) {
-		const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+		const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(
+			2,
+			"0"
+		)}`;
 		const isInstance = instanceDate && iso === instanceDate;
-		const classes = ["wi-cal-cell", "wi-cal-date",
-			isInstance ? "wi-cal-instance-date" : (dateSet.has(iso) ? "wi-cal-highlighted" : ""),
-			iso === today ? "wi-cal-today" : "",
-		].filter(Boolean).join(" ");
+		const isHighlighted = dateSet.has(iso);
+		const classes = [
+			"wi-cal-cell",
+			"wi-cal-date",
+			isHighlighted ? "wi-cal-highlighted" : "",
+			isInstance ? "wi-cal-instance-target" : "",
+		]
+			.filter(Boolean)
+			.join(" ");
 		grid += `<div class="${classes}">${day}</div>`;
 	}
 
+	let legend = `<div class="wi-cal-legend">`;
+	legend += `<span class="wi-cal-legend-item"><span class="wi-cal-legend-swatch wi-cal-legend-recurrence"></span>Linked Instances</span>`;
+	if (instanceDate) {
+		legend += `<span class="wi-cal-legend-item"><span class="wi-cal-legend-swatch wi-cal-legend-target"></span>Current Instance</span>`;
+	}
+	legend += `</div>`;
+
 	return `<div class="wi-recurrence-cal">
 		<div class="wi-cal-nav">
-			<button class="wi-cal-nav-btn ${hasPrev ? "" : "wi-cal-nav-disabled"}" data-dir="-1">&#8249;</button>
+			<button class="wi-cal-nav-btn ${
+				hasPrev ? "" : "wi-cal-nav-disabled"
+			}" data-dir="-1">&#8249;</button>
 			<span class="wi-cal-header">${MONTH_NAMES[month]} ${year}</span>
-			<button class="wi-cal-nav-btn ${hasNext ? "" : "wi-cal-nav-disabled"}" data-dir="1">&#8250;</button>
+			<button class="wi-cal-nav-btn ${
+				hasNext ? "" : "wi-cal-nav-disabled"
+			}" data-dir="1">&#8250;</button>
 		</div>
 		<div class="wi-cal-grid">${grid}</div>
+		${legend}
 	</div>`;
 }
 
@@ -932,28 +1009,49 @@ function wi_cal_inject_styles() {
 			color: #3b82f6;
 			font-weight: 600;
 		}
-		.wi-cal-today:not(.wi-cal-highlighted) {
-			border: 1.5px solid var(--text-on-gray, var(--text-color));
-			color: var(--text-on-gray, var(--text-color));
-			font-weight: 600;
-		}
-		.wi-cal-today.wi-cal-highlighted {
-			border: 2px solid rgba(140, 0, 255, 0.44);
-			background: rgba(140, 0, 255, 0.44);
-			color: #000000;
-			font-weight: 600;
-		}
-		.wi-cal-instance-date {
+		.wi-cal-instance-target {
+			border: 2px solid #3b82f6;
+			color: #000000ff;
 			background: #3b82f6;
-			color: #fff !important;
 			font-weight: 700;
-			border: 2px solid #1d4ed8;
-			border-radius: 6px;
 		}
-		.wi-cal-instance-date.wi-cal-today {
-			background: #1d4ed8;
-			border-color: #1e40af;
+		.wi-cal-highlighted.wi-cal-instance-target {
+			border-color: #3b82f6;
 		}
+		.wi-cal-legend {
+			display: flex;
+			gap: 14px;
+			flex-wrap: wrap;
+			margin-top: 12px;
+			padding-top: 10px;
+			border-top: 1px solid var(--border-color, #e2e6ea);
+			justify-content: center;
+		}
+		.wi-cal-legend-item {
+			display: inline-flex;
+			align-items: center;
+			gap: 5px;
+			font-size: 11px;
+			color: var(--text-muted, #8d99a5);
+			white-space: nowrap;
+		}
+		.wi-cal-legend-swatch {
+			width: 14px;
+			height: 14px;
+			border-radius: 4px;
+			flex-shrink: 0;
+			box-sizing: border-box;
+		}
+		.wi-cal-legend-recurrence {
+			border: 2px solid #3b82f6;
+			background: transparent;
+		}
+		.wi-cal-legend-target {
+			border: 2px solid #3b82f6;
+			background: #3b82f6;
+		}
+
+
 	</style>`);
 }
 
@@ -981,8 +1079,18 @@ function compute_recurrence_dates(doc) {
 	}
 
 	if (type === "Weekly") {
-		const DAY_MAP = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
-		const weekdays = (doc.recurrence_day || []).map((r) => DAY_MAP[r.weekday]).filter((n) => n !== undefined);
+		const DAY_MAP = {
+			Sunday: 0,
+			Monday: 1,
+			Tuesday: 2,
+			Wednesday: 3,
+			Thursday: 4,
+			Friday: 5,
+			Saturday: 6,
+		};
+		const weekdays = (doc.recurrence_day || [])
+			.map((r) => DAY_MAP[r.weekday])
+			.filter((n) => n !== undefined);
 		if (!weekdays.length) return [];
 
 		let d = new Date(start);
@@ -1003,7 +1111,9 @@ function compute_recurrence_dates(doc) {
 
 	if (type === "Monthly") {
 		if (doc.monthly_recurrence_based_on === "Date") {
-			const monthDates = (doc.recurrence_date || []).map((r) => parseInt(r.recurrence_date)).filter(Boolean);
+			const monthDates = (doc.recurrence_date || [])
+				.map((r) => parseInt(r.recurrence_date))
+				.filter(Boolean);
 			if (!monthDates.length) return [];
 			let m = new Date(start.getFullYear(), start.getMonth(), 1);
 			while (m <= cutoff && results.length < 30) {
@@ -1020,9 +1130,26 @@ function compute_recurrence_dates(doc) {
 	}
 
 	if (type === "Yearly") {
-		const MONTH_MAP = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
-		const months = (doc.recurrence_month || []).map((r) => MONTH_MAP[r.month]).filter((n) => n !== undefined);
-		const monthDates = (doc.recurrence_date || []).map((r) => parseInt(r.recurrence_date)).filter(Boolean);
+		const MONTH_MAP = {
+			January: 0,
+			February: 1,
+			March: 2,
+			April: 3,
+			May: 4,
+			June: 5,
+			July: 6,
+			August: 7,
+			September: 8,
+			October: 9,
+			November: 10,
+			December: 11,
+		};
+		const months = (doc.recurrence_month || [])
+			.map((r) => MONTH_MAP[r.month])
+			.filter((n) => n !== undefined);
+		const monthDates = (doc.recurrence_date || [])
+			.map((r) => parseInt(r.recurrence_date))
+			.filter(Boolean);
 		if (!months.length || !monthDates.length) return [];
 		let yr = start.getFullYear();
 		while (results.length < 10) {

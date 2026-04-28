@@ -475,6 +475,11 @@
    "label": "Work Item Type",
    "options": "\nRecurrence Master\nRecurring Instance",
    "read_only": 1
+  },
+  {
+   "fieldname": "recurrence_calendar_html",
+   "fieldtype": "HTML",
+   "label": "Recurrence Calendar"
   }
  ],
  "grid_page_length": 50,

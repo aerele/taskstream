@@ -202,7 +202,7 @@ class WorkItem(Document):
 		creation_limit = frappe.get_single_value("Work Item Configuration", "recurrence_creation_limit")
 
 		start_date = getdate(self.start_from)
-		end_date = datetime.strptime(self.repeat_until, "%Y-%m-%d").date()
+		end_date = datetime.strptime(str(getdate(self.repeat_until)), "%Y-%m-%d").date()
 		max_creation_date = start_date + timedelta(days=creation_limit)
 		values = _get_valid_dates(self, start_date, end_date)
 
@@ -731,6 +731,8 @@ def sent_noti(work_item):
 			to.append(doc.assignee)
 		if doc.reporter:
 			to.append(doc.reporter)
+		if doc.requester:
+			to.append(doc.requester)
 		content = f"A work item <b>{doc.name}</b> has been updated.<br><a href='{frappe.utils.get_url()}/app/work-item/{doc.name}'>View Work Item</a>"
 		send_notifications(doc.name, content, to)
 
@@ -893,9 +895,9 @@ def _update_work_item(item_name, updates):
 
 	if has_changes:
 		work_item.save()
-		# sent_noti(work_item.name)
 		if not updates.get("one_time_change"):
 			work_item.after_insert()
+		sent_noti(work_item.name)
 
 
 @safe_exec

@@ -346,8 +346,8 @@
 /* ── Recurrence description — styled card ── */
 [data-fieldname="recurrence_description"] .like-disabled-input,
 [data-fieldname="recurrence_description"] .control-value {
-	background: #fff;
-	border: 1.5px solid #d0e4f7;
+	background: var(--control-bg, #fff);
+	border: 1.5px solid var(--border-color, #d0e4f7);
 	border-radius: 10px;
 	padding: 10px 14px;
 	color: var(--text-color);
