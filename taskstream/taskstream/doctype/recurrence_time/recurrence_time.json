@@ -11,10 +11,9 @@
  "fields": [
   {
    "fieldname": "recurrence_time",
-   "fieldtype": "Data",
+   "fieldtype": "Time",
    "in_list_view": 1,
    "label": "Recurrence Time",
-   "placeholder": "HH:MM",
    "reqd": 1
   }
  ],
@@ -22,7 +21,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-22 19:38:07.860143",
+ "modified": "2026-04-28 18:56:05.554350",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Recurrence Time",
