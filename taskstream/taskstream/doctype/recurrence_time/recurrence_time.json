@@ -11,10 +11,10 @@
  "fields": [
   {
    "fieldname": "recurrence_time",
-   "fieldtype": "Time",
+   "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Recurrence Time",
-   "non_negative": 1,
+   "placeholder": "HH:MM",
    "reqd": 1
   }
  ],

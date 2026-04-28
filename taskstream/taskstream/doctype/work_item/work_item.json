@@ -49,7 +49,6 @@
   "recurrence_tab",
   "section_break_kqer",
   "recurrence_details_column",
-  "recurrence_description",
   "recurrence_type",
   "work_item_type",
   "recurrence_frequency",
@@ -62,6 +61,8 @@
   "start_from",
   "repeat_until",
   "column_break_iejr",
+  "recurrence_description",
+  "recurrence_calendar_html",
   "assigned_on",
   "score_tab",
   "section_break_yzzw",
@@ -458,6 +459,11 @@
    "fieldtype": "HTML"
   },
   {
+   "fieldname": "recurrence_calendar_html",
+   "fieldtype": "HTML",
+   "label": "Recurrence Calendar"
+  },
+  {
    "fieldname": "start_from",
    "fieldtype": "Date",
    "label": "Start From"
@@ -475,7 +481,7 @@
  "index_web_pages_for_search": 1,
  "links": [],
  "make_attachments_public": 1,
- "modified": "2026-04-27 15:35:20.842425",
+ "modified": "2026-04-28 18:21:35.936058",
  "modified_by": "Administrator",
  "module": "Taskstream",
  "name": "Work Item",
