@@ -29,6 +29,7 @@ frappe.ui.form.on("Work Item", {
 		const { user } = frappe.session;
 		const type = frm.doc.recurrence_type || "One Time";
 		const work_item_type = frm.doc.work_item_type || null;
+		const isMaster = Boolean(work_item_type === "Recurrence Master");
 		const allowed = !(type === "One Time" || work_item_type === "Recurring Instance");
 		//hide benefit_of_work_done if form is new
 		if (frm.is_new()) {
@@ -42,8 +43,11 @@ frappe.ui.form.on("Work Item", {
 		// }
 		// Mark Complete button
 		if (
-			(frm.doc.status === "Open" && !frm.doc.review_required && user === frm.doc.assignee) ||
-			(frm.doc.status === "Under Review" && user === frm.doc.reviewer)
+			!isMaster &&
+			((frm.doc.status === "Open" &&
+				!frm.doc.review_required &&
+				user === frm.doc.assignee) ||
+				(frm.doc.status === "Under Review" && user === frm.doc.reviewer))
 		) {
 			frm.add_custom_button(__("Mark Complete"), function () {
 				frappe.confirm(
@@ -87,7 +91,7 @@ frappe.ui.form.on("Work Item", {
 			});
 		}
 		// Rework button
-		if (frm.doc.status === "Under Review" && frm.doc.reviewer === user) {
+		if (!isMaster && frm.doc.status === "Under Review" && frm.doc.reviewer === user) {
 			frm.add_custom_button(__("Rework"), function () {
 				let d = new frappe.ui.Dialog({
 					title: "Rework Work Item",
@@ -142,7 +146,7 @@ frappe.ui.form.on("Work Item", {
 		// 	});
 		// }
 		//Hold Button
-		if (frm.doc.status === "Open" && frm.doc.assignee === user) {
+		if (!isMaster && frm.doc.status === "Open" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Hold"), function () {
 				frappe.db.set_value("Work Item", frm.doc.name, "status", "On Hold").then(() => {
 					frappe.msgprint(__("Work Item put on hold!"));
@@ -151,7 +155,7 @@ frappe.ui.form.on("Work Item", {
 			});
 		}
 		//Resume Button
-		if (frm.doc.status === "On Hold" && frm.doc.assignee === user) {
+		if (!isMaster && frm.doc.status === "On Hold" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Resume"), function () {
 				frappe.db.set_value("Work Item", frm.doc.name, "status", "Open").then(() => {
 					frappe.msgprint(__("Work Item resumed!"));
@@ -160,7 +164,7 @@ frappe.ui.form.on("Work Item", {
 			});
 		}
 		// Send for Review button
-		if (!frm.is_new() && ["Open", "Under Review"].includes(frm.doc.status)) {
+		if (!isMaster && !frm.is_new() && ["Open", "Under Review"].includes(frm.doc.status)) {
 			const iscritical = frm.doc.review_required;
 
 			if (iscritical && user === frm.doc.assignee && frm.doc.status == "Open") {
@@ -182,7 +186,7 @@ frappe.ui.form.on("Work Item", {
 			}
 		}
 		//Time extension button
-		if (frm.doc.status === "Open" && frm.doc.assignee === user) {
+		if (!isMaster && frm.doc.status === "Open" && frm.doc.assignee === user) {
 			frm.add_custom_button(__("Request Time Extension"), function () {
 				let d = new frappe.ui.Dialog({
 					title: "Request Time Extension",
@@ -272,6 +276,7 @@ frappe.ui.form.on("Work Item", {
 			frm.doc.requester,
 		];
 		if (
+			!isMaster &&
 			frm.doc.status === "Open" &&
 			approved_users_for_reassignment.includes(user) &&
 			(frm.doc.recurrence_type === "One Time" ||
@@ -728,8 +733,9 @@ function update_recurrence_description(frm) {
 		if (frm.doc.monthly_recurrence_based_on === "Date" && rec_dates.length) {
 			desc += ` on the ${rec_dates.join(", ")}`;
 		} else if (frm.doc.monthly_recurrence_based_on === "Day") {
-			const occurrences = (frm.doc.recurrence_day_occurrence || [])
-				.map((d) => `${d.week_order} ${d.weekday}`);
+			const occurrences = (frm.doc.recurrence_day_occurrence || []).map(
+				(d) => `${d.week_order} ${d.weekday}`
+			);
 			if (occurrences.length) {
 				desc += ` on the ${occurrences.join(", ")}`;
 			}
