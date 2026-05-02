@@ -665,6 +665,11 @@ function update_recurrence_description(frm) {
 		? ` until ${moment(frm.doc.repeat_until).format("MMM D, YYYY")}`
 		: "";
 
+	// "effective from Apr 1, 2026"
+	const effectiveSuffix = frm.doc.start_from
+		? ` effective from ${moment(frm.doc.start_from).format("MMM D, YYYY")}`
+		: "";
+
 	const DAY_ORDER = {
 		Sunday: 0,
 		Monday: 1,
@@ -752,7 +757,7 @@ function update_recurrence_description(frm) {
 		}
 	}
 
-	desc += timeSuffix + untilSuffix;
+	desc += timeSuffix + effectiveSuffix + untilSuffix;
 
 	frm.set_value("recurrence_description", desc);
 	render_recurrence_calendar(frm);
@@ -940,6 +945,7 @@ function wi_cal_build_html(months, dateSet, index, instanceDate) {
 		</div>
 		<div class="wi-cal-grid">${grid}</div>
 		${legend}
+		<div class="wi-cal-note">Note: Calendar shows a limited set of instances for reference purposes.</div>
 	</div>`;
 }
 
@@ -1055,6 +1061,14 @@ function wi_cal_inject_styles() {
 		.wi-cal-legend-target {
 			border: 2px solid #3b82f6;
 			background: #3b82f6;
+		}
+
+		/* Informational note below calendar */
+		.wi-cal-note {
+			margin-top: 10px;
+			font-size: 12px;
+			color: var(--text-muted, #6b7280);
+			text-align: center;
 		}
 
 
